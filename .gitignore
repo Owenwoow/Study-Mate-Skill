@@ -1,0 +1,8 @@
+# 临时产物
+__pycache__/
+*.pyc
+.preview/
+
+# 学习数据（默认工作区）。想让学习记录进版本库就删掉下面两行。
+/workspace/*
+!/workspace/.gitkeep

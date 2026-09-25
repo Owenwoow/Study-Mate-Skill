@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>术语表 · TypeScript Web API</title>
+<link rel="stylesheet" href="../../assets/sayo/sayo.css">
+<link rel="stylesheet" href="../../assets/learn-theme.css">
+<link rel="stylesheet" href="assets/style.css">
+<script src="../../assets/learn-theme.js"></script>
+<script>LearnTheme.apply();</script>
+<style>
+.lesson h1 {
+  margin: var(--syo-space-2, 8px) 0 var(--syo-space-4, 16px);
+  font-size: clamp(1.6rem, 3.2vw, 2.25rem);
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+  color: var(--syo-fg-default);
+}
+</style>
+</head>
+<body class="lesson-body">
+<nav class="lesson-bar">
+  <a href="index.html">← 返回科目</a>
+  <span>TypeScript Web API</span>
+  <span class="lesson-bar__no">术语表</span>
+  <label class="syo-toggle syo-toggle--theme lesson-bar__toggle" title="切换深浅主题" aria-label="切换深浅主题">
+    <input type="checkbox" id="attachment-theme-checkbox" checked>
+    <span class="syo-toggle-track"></span>
+    <span class="syo-toggle-knob">
+      <svg class="syo-toggle-sun" viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="10" cy="10" r="3.5" stroke="#f57c00" stroke-width="1.5"/><path d="M10 2v2.5M10 15.5V18M2 10h2.5M15.5 10H18M4.34 4.34l1.77 1.77M13.89 13.89l1.77 1.77M4.34 15.66l1.77-1.77M13.89 6.11l1.77-1.77" stroke="#f57c00" stroke-width="1.2" stroke-linecap="round"/></svg>
+      <svg class="syo-toggle-moon" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M16.5 12.5A6 6 0 019 4.5a6 6 0 007.5 8z" stroke="#5c6bc0" stroke-width="1.5" stroke-linejoin="round"/></svg>
+    </span>
+  </label>
+</nav>
+
+<article class="lesson">
+<h1>TypeScript Web API Glossary</h1>
+<p>这门课讲怎么用 TypeScript 写一个能上线的 Web API：从 HTTP 报文、路由、参数校验一路做到数据库与部署。</p>
+<h2>Terms</h2>
+<p><strong>端点 (endpoint)</strong>:<br>一个「方法 + 路径」的组合，是客户端能调用的最小单位，例如 <code>POST /orders</code>。<br><em>Avoid</em>: 接口、路由地址（"接口"太泛，"路由"指的是匹配规则那一层）</p>
+<p><strong>中间件 (middleware)</strong>:<br>排在处理函数之前、能读到请求并决定继续或提前返回的函数，用来做日志、鉴权、错误兜底。<br><em>Avoid</em>: 拦截器、过滤器</p>
+<p><strong>幂等 (idempotent)</strong>:<br>同一个请求重复发多次，服务端最终状态与发一次相同。PUT 与 DELETE 一般设计成幂等，POST 不保证。<br><em>Avoid</em>: 可重试（那是"重试安全"，是它的结果不是它的定义）</p>
+<p><strong>参数校验 (validation)</strong>:<br>在进入业务逻辑前，把入参检查成可信的形状；失败要返回明确的 4xx 与哪一项不合法。<br><em>Avoid</em>: 类型检查（那是编译期的事）</p>
+<p><strong>迁移 (migration)</strong>:<br>用可重放的脚本管理表结构变更，让"数据库当前长什么样"能从代码推出来。<br><em>Avoid</em>: 建表脚本、DDL（后者是手段，不是这个概念）</p>
+  <footer class="lesson-footer">
+    StudyMate · 术语表 · 本地学习工作区
+  </footer>
+</article>
+
+<script src="../../assets/sayo/sayo.js"></script>
+<script>LearnTheme.wire(document.getElementById('attachment-theme-checkbox'));</script>
+</body>
+</html>
