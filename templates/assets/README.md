@@ -10,6 +10,7 @@
 | `sayo/` | **Sayo UI**（自研零依赖 CSS 框架 + 交互引擎），MIT。含 `sayo.css`、`sayo.js`、`icons/`、`LICENSE` | 从 sayo-ui 项目整体拷贝，**不要手改** |
 | `learn-theme.css` | 本项目**共享主题层**：亮色=暖纸白+深绿（覆盖 `--syo-*`）、暗色=用 Sayo 默认的 Primer 暗色；修正 Sayo 里为暗色硬编码的紫色光晕；放跨页面组件（进度条、状态徽标、筛选、空状态） | 本项目自研，改色只改这里 |
 | `learn-theme.js` | **共享行为层**：① 主题（亮/暗）逻辑——早期应用、切换并持久化、绑定开关（`LearnTheme.apply/set/toggle/current/wire`）；② **代码块高亮**——课件里的 `<pre><code>` 与 `.syo-editor` 加载即自动上色（`LearnTheme.highlight`）。三个页面共用，别各写一份 | 本项目自研 |
+| `prism/` | **PrismJS 1.30.0**（MIT，npm `prismjs` 打包）：`prism.js` = core + 语法（markup css clike javascript c cpp python bash powershell json sql yaml）+ 插件 toolbar / show-language / copy-to-clipboard；`prism-toolbar.css` = 工具栏基础样式；`LICENSE` | 从 npm 包拼接，**不要手改**；要加语法就重新拼 `prism.js`（文件头注释写明了拼了哪些） |
 | `learn-mascot.png` | **抬头看板娘**（640×425，256 色带 alpha，23KB）：透明底 + 底部羽化，给根主页抬头当主视觉（`.learn-hero__mascot`） | 本项目自研；**只有根主页引用它**，科目页与课件不引用 |
 | `style.css` | **课件层**（讲解排版 + 练习样式），叠在 Sayo 之上 | 本项目自研；Task 8 拷进每个科目 |
 | `quiz.js` | 课件**题目组件**（选择题即时反馈 + 开放题点开对照参考答案与判分要点）。数据契约以它顶部注释为准 | 同上 |
@@ -23,6 +24,7 @@
 └── .learning/
     ├── assets/                                 # ← 全工作区共享一份
     │   ├── sayo/{sayo.css,sayo.js,icons/,LICENSE}
+    │   ├── prism/{prism.js,prism-toolbar.css,LICENSE}
     │   ├── learn-theme.css
     │   ├── learn-theme.js
     │   └── learn-mascot.png
@@ -45,7 +47,7 @@
 |------|-----------|-------------|
 | 根主页 `<WS>/index.html` | `.learning/assets/sayo/sayo.css`<br>`.learning/assets/learn-theme.css`<br>`.learning/assets/learn-theme.js`<br>`.learning/assets/sayo/sayo.js`<br>`.learning/assets/learn-mascot.png`（抬头看板娘，`<img>`） | — |
 | 科目主页 `<WS>/.learning/subjects/<slug>/index.html` | `../../assets/sayo/sayo.css`<br>`../../assets/learn-theme.css`<br>`../../assets/learn-theme.js`<br>`../../assets/sayo/sayo.js` | `assets/style.css` |
-| 课件 `<WS>/.learning/subjects/<slug>/lessons/<NNNN>-<节点id>.html`<br>（由 `scripts/render_lesson.py` 从 `<NNNN>-<节点id>.md` + `.quiz.json` 渲染产出；`templates/lesson.html` 是占位符壳，**不要手工拷贝**） | `../../../assets/sayo/sayo.css`<br>`../../../assets/learn-theme.css`<br>`../../../assets/learn-theme.js`<br>`../../../assets/sayo/sayo.js` | `../assets/style.css`<br>`../assets/quiz.js`<br>`../assets/lesson-toc.js` |
+| 课件 `<WS>/.learning/subjects/<slug>/lessons/<NNNN>-<节点id>.html`<br>（由 `scripts/render_lesson.py` 从 `<NNNN>-<节点id>.md` + `.quiz.json` 渲染产出；`templates/lesson.html` 是占位符壳，**不要手工拷贝**） | `../../../assets/sayo/sayo.css`<br>`../../../assets/prism/prism-toolbar.css`<br>`../../../assets/prism/prism.js`（`data-manual`）<br>`../../../assets/learn-theme.css`<br>`../../../assets/learn-theme.js`<br>`../../../assets/sayo/sayo.js` | `../assets/style.css`<br>`../assets/quiz.js`<br>`../assets/lesson-toc.js` |
 
 > 路径提示：课件在 `.learning/subjects/<slug>/lessons/` 下，向上三层就是 `.learning/`，
 > 所以共享层是 `../../../assets/…`（不要再写一层 `.learning`）；科目内组件则是 `../assets/…`。
@@ -61,8 +63,10 @@
 课件的代码块**不用手写高亮**：页面加载时 `learn-theme.js` 会给 `<pre><code>` 与 `.syo-editor-code` 里的
 代码自动上色（token 类沿用 Sayo 的 `.syn-*`，颜色随亮/暗主题走）。
 
-- 语言按内容猜：`cpp` / `sh` / `term`（终端与编译器输出）/ `html` / `js` / `json`；猜不出来就**保持原样**（程序输出、题面文字不该被染色）
-- 要指定就写 `data-lang="cpp|sh|html|js|json|term"`；`data-lang="text"` = 明确不上色
+- 语言按内容猜：`python` / `powershell` / `cpp` / `sh` / `term`（终端、编译器输出、Python 回溯）/ `html` / `js` / `json`；猜不出来就**保持原样**（程序输出、题面文字不该被染色）
+- 要指定就写 `data-lang="python|sh|powershell|html|js|json|sql|css|cpp|yaml|term"`（别名 py/bash/ps1/xml/yml… 也认）；`data-lang="text"` = 明确不上色
+- **课件页（加载了 `prism/`）**：上色交给 Prism，token 经 `wrap` 钩子追加成 `.syn-*`，配色照旧走主题令牌；每个 `pre > code` 右上角挂 **语言角标 + 复制按钮**（交互照搬 VitePress：常显淡色语言名，悬停时它淡出、同一角落换成只有图标的复制按钮，成功换勾选图标）（Prism 官方插件 toolbar / show-language / copy-to-clipboard，文案中文化、外观在 `learn-theme.css` 末尾「代码块工具栏」一节）。Prism 没有的语法（`term`）与手写 `.syn-*` 的块仍走自研正则/保留手写，只挂工具栏；`.syo-editor` 不挂工具栏
+- **主页（没加载 Prism）**：退回自研正则（cpp/sh/term/html/js/json），行为与以前一致
 - 一个块里只要手写过 `.syn-*`，整块跳过——手工优先，自动不覆盖
 - 猜错的常见场合：整块贴的都是「命令 + 输出」混排时按首行判定，可用 `data-lang` 纠正
 

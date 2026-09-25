@@ -382,7 +382,7 @@ def main():
     # 清单必须与 templates/assets/README.md 一致——新增共享文件时两处都要加
     src_assets = os.path.join(ROOT, 'templates', 'assets')
     shared_files = ('learn-theme.css', 'learn-theme.js', 'learn-mascot.png')
-    shared_dirs = ('sayo',)
+    shared_dirs = ('sayo', 'prism')
     for name in shared_files:
         shutil.copy(os.path.join(src_assets, name), assets)
     for name in shared_dirs:

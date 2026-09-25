@@ -484,3 +484,80 @@ html[data-theme="light"] .syo-tabs input:checked + .syo-tab::after {
 html[data-theme="light"] .learn-hero__stars,
 html[data-theme="light"] .learn-hero__nebula { display: none; }
 html[data-theme="dark"] .learn-hero__grid { display: none; }
+
+/* ═══════════════════════════════════════════════════════════════
+   代码块工具栏：照搬 VitePress 默认主题的交互（vitepress/theme-default vp-doc.css）
+   · 右上角常显淡色语言名（span.lang）；
+   · 悬停/聚焦代码块时语言名淡出，同一角落淡入一个只有图标的复制按钮（button.copy）；
+   · 复制成功换成「带勾的剪贴板」图标，不出文字。
+   结构由 Prism 官方插件 toolbar / show-language / copy-to-clipboard 生成（vendored 在 prism/），
+   这里只把 VitePress 的样式映射到 Prism 的类名、颜色换成 Sayo 令牌。
+   图标与 VitePress 相同：Lucide「clipboard」/「clipboard-check」（ISC 许可，lucide.dev），
+   用 mask 着色以跟随亮/暗主题。按钮里的文字（「复制代码」）只留给读屏，视觉上隐藏。
+   ═══════════════════════════════════════════════════════════════ */
+:root {
+  --learn-icon-copy: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' stroke='black' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' viewBox='0 0 24 24'%3E%3Crect width='8' height='4' x='8' y='2' rx='1' ry='1'/%3E%3Cpath d='M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2'/%3E%3C/svg%3E");
+  --learn-icon-copied: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' stroke='black' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' viewBox='0 0 24 24'%3E%3Crect width='8' height='4' x='8' y='2' rx='1' ry='1'/%3E%3Cpath d='M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2'/%3E%3Cpath d='m9 14 2 2 4-4'/%3E%3C/svg%3E");
+}
+div.code-toolbar { position: relative; }
+div.code-toolbar > .toolbar {
+  position: absolute; top: 0; right: 0; left: auto;
+  width: 0; height: 0;                    /* 两个条目都绝对定位在同一角落，工具栏本身不占位 */
+  opacity: 1;
+}
+div.code-toolbar > .toolbar > .toolbar-item { display: block; }
+/* 语言名：对应 VitePress 的 span.lang */
+div.code-toolbar > .toolbar > .toolbar-item > span {
+  position: absolute; top: 4px; right: 10px; z-index: 2;
+  padding: 0; background: none; box-shadow: none; border-radius: 0;
+  font-family: var(--syo-font-mono);
+  font-size: 12px; font-weight: 500; line-height: 1.6;
+  color: var(--syo-fg-muted);
+  white-space: nowrap;
+  user-select: none;
+  pointer-events: none;
+  transition: color .4s, opacity .4s;
+}
+/* 复制按钮：对应 VitePress 的 button.copy（只有图标） */
+div.code-toolbar > .toolbar > .toolbar-item > button.copy-to-clipboard-button {
+  position: absolute; top: 8px; right: 8px; z-index: 3;
+  width: 32px; height: 32px; padding: 0;
+  border: 1px solid var(--syo-border);
+  border-radius: 4px;
+  background: var(--syo-bg-surface);
+  box-shadow: none;
+  color: var(--syo-fg-muted);
+  cursor: pointer;
+  opacity: 0;
+  transition: border-color .25s, color .25s, opacity .25s;
+}
+div.code-toolbar > .toolbar > .toolbar-item > button.copy-to-clipboard-button > span {
+  position: absolute; width: 1px; height: 1px; overflow: hidden;
+  clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap;   /* 文字只给读屏 */
+}
+div.code-toolbar > .toolbar > .toolbar-item > button.copy-to-clipboard-button::before {
+  content: "";
+  position: absolute; inset: 0; margin: auto;
+  width: 16px; height: 16px;
+  background: currentColor;
+  -webkit-mask: var(--learn-icon-copy) center / contain no-repeat;
+          mask: var(--learn-icon-copy) center / contain no-repeat;
+}
+div.code-toolbar > .toolbar > .toolbar-item > button.copy-to-clipboard-button[data-copy-state="copy-success"]::before {
+  -webkit-mask-image: var(--learn-icon-copied);
+          mask-image: var(--learn-icon-copied);
+}
+/* 悬停/聚焦：按钮出现、语言名淡出（VitePress: :hover > button.copy + span.lang { opacity: 0 }） */
+div.code-toolbar:hover > .toolbar > .toolbar-item > button.copy-to-clipboard-button,
+div.code-toolbar > .toolbar > .toolbar-item > button.copy-to-clipboard-button:focus,
+div.code-toolbar > .toolbar > .toolbar-item > button.copy-to-clipboard-button:not([data-copy-state="copy"]) { opacity: 1; }
+div.code-toolbar:hover > .toolbar > .toolbar-item > span,
+div.code-toolbar:focus-within > .toolbar > .toolbar-item > span { opacity: 0; }
+div.code-toolbar > .toolbar > .toolbar-item > button.copy-to-clipboard-button:hover,
+div.code-toolbar > .toolbar > .toolbar-item > button.copy-to-clipboard-button[data-copy-state="copy-success"] {
+  border-color: var(--syo-accent);
+  color: var(--syo-fg-default);
+}
+div.code-toolbar > .toolbar > .toolbar-item > button.copy-to-clipboard-button[data-copy-state="copy-success"] {
+  color: var(--syo-syn-string);
+}

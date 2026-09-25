@@ -35,9 +35,12 @@
 
 <!-- 共享层在 .learning/assets/，课件在 .learning/subjects/<slug>/lessons/ 下，所以是 ../../../assets/ -->
 <link rel="stylesheet" href="../../../assets/sayo/sayo.css">
+<link rel="stylesheet" href="../../../assets/prism/prism-toolbar.css">
 <link rel="stylesheet" href="../../../assets/learn-theme.css">
 <link rel="stylesheet" href="../assets/style.css">
 
+<!-- Prism（vendored，MIT）：代码块上色 + 工具栏（语言角标、复制按钮）。data-manual = 不自动跑，由 learn-theme.js 调度 -->
+<script src="../../../assets/prism/prism.js" data-manual></script>
 <!-- 主题要在首帧前应用，避免闪白/闪黑 -->
 <script src="../../../assets/learn-theme.js"></script>
 <script>LearnTheme.apply();</script>
