@@ -160,9 +160,31 @@ def strip_comments(text):
     return COMMENT_RE.sub('', text)
 
 
+class RefScanner(HTMLParser):
+    """只收**真标签**上的 href/src（HTMLParser 的起始标签回调，与 gen_home 的链接自检同口径）。"""
+
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.values = []
+
+    def handle_starttag(self, tag, attrs):
+        for name, value in attrs:
+            if name in ('href', 'src') and value is not None:
+                self.values.append(value)
+
+    handle_startendtag = handle_starttag
+
+
 def ref_values(text):
-    """取出所有 href/src 属性值，供引用类检查比对。"""
-    return REF_ATTR_RE.findall(text)
+    """取出所有标签上的 href/src 属性值，供引用类检查比对。
+
+    不用正则扫全文：课件正文里转义后当文字展示的 HTML 示例（`&lt;a href="/news/1.html"&gt;`，
+    爬虫、HTML 解析这类课很常见）也带 `href=`，正则会把它当成真链接、报「引用了不存在的本地文件」。
+    """
+    scanner = RefScanner()
+    scanner.feed(text)
+    scanner.close()
+    return scanner.values
 
 
 def local_target(path, value):

@@ -42,6 +42,9 @@ EXTERNAL = ('  <p><a href="https://example.com/x">外链</a> '
             '<a href="mailto:someone@example.com">邮件</a> '
             '<a href="//cdn.example.com/lib.js">协议相对</a></p>\n')
 COMMENTED = '  <!-- <a href="../lab/ghost/README.md">模板里的示例链接</a> -->\n'
+ESCAPED_CODE = ('  <pre><code>&lt;a href="/news/1.html"&gt;头条&lt;/a&gt;\n'
+                '&lt;img src="ghost.png"&gt;</code></pre>\n'
+                '  <p>正文里提到 <code>href="/x"</code> 这种写法</p>\n')
 WITH_QUERY = '  <p><a href="../reference/cheatsheet.html?v=2#top">带查询串的速查</a></p>\n'
 
 # (说明, extra 里的 HTML, 要不要先删掉某个组件文件, 该不该拦, 输出里要含的片段)
@@ -52,6 +55,7 @@ CASES = [
     ('外链/锚点/mailto/协议相对（放行）', EXTERNAL, None, False, None),
     ('注释里的路径（放行）', COMMENTED, None, False, None),
     ('带 ?查询串 与 #片段（放行）', WITH_QUERY, None, False, None),
+    ('转义后当文字展示的 HTML 示例代码（放行）', ESCAPED_CODE, None, False, None),
     ('科目组件 quiz.js 不在（拦）', '', 'quiz.js', True, 'quiz.js'),
     ('科目组件 lesson-toc.js 不在（拦）', '', 'lesson-toc.js', True, 'lesson-toc.js'),
     ('共享层 learn-theme.css 不在（拦）', '', 'shared:learn-theme.css', True, 'learn-theme.css'),

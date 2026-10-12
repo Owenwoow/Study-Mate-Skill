@@ -23,6 +23,7 @@
 | 工作区三级定位（`LEARN_WORKSPACE` → `studymate.config.yaml` → `<root>/workspace`）；上游改成读 DSH 配置，不跟 | `scripts/gen_home.py` 的 `learn_workspace()` 与 `main()` | 蒸馏时 |
 | 测试入口用本地 `run_tests.sh` 逐套列出（上游改成 `npm test`）；结构闸门 `test_package.py` 是本地独有 | `scripts/tests/run_tests.sh`、`scripts/tests/test_package.py`、`scripts/tests/README.md` | 蒸馏时 |
 | 示例科目是删减过的（没有课件），`build_examples.py` 额外给每个科目装课件层组件 | `examples/`、`scripts/build_examples.py` | 2026-10-12 |
+| 检查项 10 的引用取值改成只认真标签上的 href/src（上游正则扫全文，会把转义后的示例代码当链接；上游 Python 版已删、不会再修） | `scripts/check_lesson.py` 的 `ref_values`、`scripts/tests/test_lesson_links.py` | 2026-10-12 |
 | 角色不再派子代理（Claude Code 的子代理不能再派）：resource-scout 自己转换本地教材 | `references/roles/resource-scout.md`、`SKILL.md` 派工边界 | 2026-10-12 |
 | 引擎开发会话的 CLAUDE.md 与权限配置 | `CLAUDE.md`、`.claude/settings.json`、`.gitignore` | `048d86a` |
 | 同步状态文件 | `UPSTREAM.md` | — |
