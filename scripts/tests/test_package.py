@@ -2,10 +2,10 @@
 """技能包结构闸门：入口与参考规格齐全、SKILL.md 的关键规则在位、交叉引用不断链、无宿主专有残留。
 
 这是把 DSH 原版的「提示词压缩回归」换成**宿主无关**版本后的产物：
-原版钉的是 11 个 `SKILL.md` 里的 417 条措辞；通用版只有 1 个入口 + 10 份参考规格，
+原版钉的是 11 个 `SKILL.md` 里的 417 条措辞；通用版只有 1 个入口 + 11 份参考规格，
 所以这里钉三类东西——
 
-  ① 包结构：入口、5 个角色、5 个协议、4 份约束文档、5 份 schema、9 个脚本、模板齐全；
+  ① 包结构：入口、5 个角色、6 个协议、4 份约束文档、5 份 schema、15 个脚本、模板齐全；
   ② 规则在位：SKILL.md 里承载可执行规则的片段（阈值、字段名、文件名、命令、时机、禁止项）
      逐条必须在（压缩/改写时不许丢规则）；
   ③ 一致性与洁净：SKILL.md 提到的每个 `references/*.md` 与 `scripts/*.py` 都真实存在；
@@ -21,13 +21,15 @@ import sys
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 ROLES = ('resource-scout', 'image-scout', 'curriculum-designer', 'learning-coach', 'practice-evaluator')
-PROTOCOLS = ('lesson-design', 'layered-practice', 'evidence-check', 'local-qa', 'record-keeping')
+PROTOCOLS = ('learning-discovery', 'lesson-design', 'layered-practice', 'evidence-check', 'local-qa',
+             'record-keeping')
 DOCS = ('课件内容格式.md', '工程约束.md', '使用说明.md', '设计方案.md', '安装与迁移.md')
 SCHEMAS = ('curriculum.schema.json', 'progress.schema.json', 'assessment.schema.json',
            'session-summary.schema.json', 'subject.schema.json')
 SCRIPTS = ('gen_home.py', 'render_lesson.py', 'check_lesson.py', 'check_curriculum.py',
            'check_pool.py', 'check_skill.py', 'preview_templates.py',
-           'apply_empty_reasons.py', 'renumber_lessons.py')
+           'apply_empty_reasons.py', 'renumber_lessons.py', 'build_examples.py',
+           'curriculum.py', 'lessonfile.py', 'lessonfmt.py', 'pagetpl.py', 'statuses.py')
 TEMPLATES = ('lesson.html', 'home-index.html', 'subject-index.html',
              'MEMORY.md', 'MISSION.md', 'RESOURCES.md', 'GLOSSARY.md', 'subject.yaml')
 
@@ -41,7 +43,7 @@ SKILL_RULES = [
     ('新科目落地含 assessments/', 'assessments/'),
     ('MISSION 两节来自盘问第一问', 'Success looks like'),
     ('先派 resource-scout 收集资料', '`resource-scout` 收集资料'),
-    ('资源清单：角色落 deliver/、总控 cp 落位', '/tmp/resource-scout-<slug>/deliver/RESOURCES.md'),
+    ('资源清单：角色落 deliver/、总控 cp 落位', '<subject_path>/.stage/resource-scout-<slug>/deliver/RESOURCES.md'),
     ('建池与拟大纲并行', '建池与拟大纲并行'),
     ('图片库为空不阻塞', '图片库为空不阻塞'),
     ('progress 初始值', 'misconceptions: []'),

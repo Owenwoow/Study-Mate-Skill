@@ -17,8 +17,10 @@ description: 档案维护规范：学习状态的读写规则（共享记忆、�
         ├── curriculum.yaml       # 课程设计角色产出
         ├── progress.yaml  misconceptions.yaml
         ├── index.html            # 科目主页（生成产物）
-        ├── lessons/ reference/ assets/    # 课件三件（见下）、速查页、科目组件
+        ├── lessons/ reference/ assets/    # 课件三件（见下）、速查页与本地资料、科目组件
         ├── lab/                  # 角色落 deliver/、你 cp 搬入：实操 + solutions/ + README.md；概念课没有
+        ├── .stage/               # 角色产出的暂存区（角色写、你 cp 搬入后删；不留到交付）
+        ├── sources/              # 在线来源原文（resource-scout 落），与 lab/ 一样按需建，不预建
         ├── assessments/          # 评估记录（你撰写）
         ├── learning-records/     # 学习记录
         └── sessions/YYYY-MM-DD.md

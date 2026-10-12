@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # StudyMate 回归测试：纯 Python / Node，不需要浏览器（默认）。
-#   bash scripts/tests/run_tests.sh              # 11 套快测
-#   bash scripts/tests/run_tests.sh --browser    # 再加需要 google-chrome 的 2 套（共 13 套）
+#   bash scripts/tests/run_tests.sh              # 18 套快测
+#   bash scripts/tests/run_tests.sh --browser    # 再加需要 google-chrome 的 3 套（共 21 套）
 set -u
 cd "$(dirname "$0")/../.." || exit 1
 
@@ -31,6 +31,13 @@ step '图片库索引（校验器，6 例）'            python3 scripts/tests/t
 step '位次重排与 empty_reason（脚本，22 例）'  python3 scripts/tests/test_lesson_scripts.py
 step '课件渲染（渲染器，26 例）'           python3 scripts/tests/test_render_lesson.py
 step '附件 Markdown 渲染（29 项）'         python3 scripts/tests/test_attachment_render.py
+step '课程大纲口径（curriculum.py）'       python3 scripts/tests/test_curriculum.py
+step '课件本地引用可达（检查项 10）'       python3 scripts/tests/test_lesson_links.py
+step '文件名与资源清单（lessonfile.py）'   python3 scripts/tests/test_lessonfile.py
+step '内容格式围栏（lessonfmt.py）'        python3 scripts/tests/test_lessonfmt.py
+step '状态与课型词表（statuses.py）'       python3 scripts/tests/test_statuses.py
+step '模板与规格一致'                      python3 scripts/tests/test_templates.py
+step '全部 .py 能编译'                     python3 scripts/tests/test_python_syntax.py
 
 if command -v node >/dev/null 2>&1; then
   step 'quiz.js 渲染（33 项）'             node scripts/tests/quiz_dom_test.js
@@ -43,6 +50,7 @@ if [ "$BROWSER" = 1 ]; then
   if command -v google-chrome >/dev/null 2>&1; then
     step '代码块高亮（真实 Chrome，29 项）'     node scripts/tests/browser/hl_test.mjs
     step '题目里的代码块（真实 Chrome，11 项）' node scripts/tests/browser/quiz_code_test.mjs
+    step '公式排版（真实 Chrome）'            node scripts/tests/browser/math_test.mjs
   else
     printf '\n跳过浏览器那几套：没装 google-chrome。\n'
   fi

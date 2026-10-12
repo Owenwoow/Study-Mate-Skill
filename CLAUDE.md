@@ -16,7 +16,7 @@
 - 改了 SKILL.md、角色或协议规格 → 跑 `python scripts/check_skill.py`
 - 改了脚本、模板、`templates/assets/` 或本包文档 → 再跑回归测试 `bash scripts/tests/run_tests.sh`
   - 本机没有 `python3` 命令：先在 scratchpad 建一个指向 `python` 的 `python3` 包装脚本并放进 `PATH`，同时设 `PYTHONUTF8=1`（否则子进程按 GBK 解码输出，测试会误报）
-- 新增/改名共享前端文件：清单分散在三处，必须同时改——`templates/assets/README.md`、`scripts/preview_templates.py` 的 `shared_dirs/shared_files`、`scripts/gen_home.py` 的 `ensure_shared_assets`
+- 新增/改名共享前端文件：拷贝清单只有一份——`scripts/lessonfile.py` 的 `SHARED_DIRS`/`SHARED_FILES`（`gen_home.py`、`preview_templates.py`、`build_examples.py` 都照它拷）；再同步 `templates/assets/README.md` 与 `references/工程约束.md` 的说明，改完跑 `python scripts/build_examples.py` 刷新示例副本
 - 看效果：`python scripts/preview_templates.py` 生成到 `.preview/`（已忽略），不要拿真实工作区试
 
 ## 同步到学习工作区

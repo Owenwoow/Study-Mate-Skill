@@ -28,7 +28,9 @@
    约定：只用一个 data-theme 属性；**不要**用 Sayo 自带的 data-syo-theme，两套属性会打架。
 
    代码块高亮：课件里的 <pre><code> 和 .syo-editor 会自动上色，讲解角色写纯文本即可；
-   要指定语言就在容器上写 data-lang="cpp|sh|html|js|json|term"（text = 不上色）。
+   要指定语言就在容器上写 data-lang="python|sh|powershell|html|js|json|sql|cpp|yaml|term"（text = 不上色）。
+   页面加载了 Prism（课件页）时：上色交给 Prism，并在代码块右上角挂语言角标 + 复制按钮；
+   没加载 Prism（主页）时退回下方的自研正则。
    ═══════════════════════════════════════════════════════════════ */
 (function (global) {
   'use strict';
@@ -90,7 +92,8 @@
      颜色由 sayo.css（暗色）+ learn-theme.css（亮色）给，这里不碰颜色。
 
      作用对象：<pre><code>…</code></pre> 与 .syo-editor-code 里的 .line 行。
-     语言：容器上写 data-lang="cpp|sh|html|js|json|term" 指定（text = 不上色），
+     语言：容器上写 data-lang="cpp|sh|bash|shell|term|html|js|javascript|ts|typescript|json|python|py" 指定
+           （text／plain／markdown／md／http／yaml／yml／toml／sql／ini／diff／mermaid／powershell／java = 不上色），
            不写就按内容猜；猜不出的（普通输出、题面文字）原样不动。
      已手写过 .syn-* 的块整块跳过——手工优先，自动不覆盖。
      ═══════════════════════════════════════════════════════════════ */
@@ -156,7 +159,31 @@
       html = html.replace(/\b(true|false|null)\b/g, function (m) { return t('syn-keyword', m); });
       html = html.replace(/\b(-?\d+(?:\.\d+)?)\b/g, function (m) { return t('syn-number', m); });
       return html;
-    }
+    },
+
+    /* Python：课件里的脚本与库调用 */
+    python: function (html, t) {
+      html = html.replace(/((?:[rbfuRBFU]{0,2})"""[\s\S]*?"""|(?:[rbfuRBFU]{0,2})'''[\s\S]*?'''|(?:[rbfuRBFU]{0,2})"(?:[^"\\\n]|\\.)*"|(?:[rbfuRBFU]{0,2})'(?:[^'\\\n]|\\.)*'|#[^\n]*)/g,
+        function (m) { return t(m[0] === '#' ? 'syn-comment' : 'syn-string', m); });
+      html = html.replace(/(^|\n)([ \t]*)(@[A-Za-z_][\w.]*)/g,
+        function (m, a, b, c) { return a + b + t('syn-macro', c); });
+      html = html.replace(/\b(def|class|return|if|elif|else|for|while|break|continue|pass|import|from|as|with|try|except|finally|raise|lambda|global|nonlocal|assert|del|yield|await|async|in|is|not|and|or|True|False|None)\b/g,
+        function (m) { return t('syn-keyword', m); });
+      html = html.replace(/\b(int|float|str|bytes|bool|list|tuple|dict|set|frozenset|complex|object|type|range|enumerate|zip|len|print|min|max|sum|abs|round|sorted|reversed|open|isinstance|self|cls|Exception|ValueError|TypeError|IndexError|KeyError|RuntimeError|StopIteration)\b/g,
+        function (m) { return t('syn-type', m); });
+      html = html.replace(/(?<!&#)\b(\d+(?:\.\d+)?)\b/g, function (m) { return t('syn-number', m); });
+      html = html.replace(/\b([A-Za-z_]\w*)(?=\s*\()/g, function (m) { return t('syn-func', m); });
+      return html;
+    },
+
+    /* 围栏里的常见别名：`py` 与 `bash` 指的是同一套配色 */
+    py: function (html, t) { return LANGS.python(html, t); },
+    bash: function (html, t) { return LANGS.sh(html, t); },
+    /* 围栏里常见的同义写法 */
+    shell: function (html, t) { return LANGS.sh(html, t); },
+    javascript: function (html, t) { return LANGS.js(html, t); },
+    ts: function (html, t) { return LANGS.js(html, t); },
+    typescript: function (html, t) { return LANGS.js(html, t); }
   };
 
   /* 按内容猜语言；猜不出返回 null（原样不动，普通输出不该被染色） */
@@ -171,10 +198,13 @@
   }
 
   function detect(text) {
-    if (/\b(error|warning|note):|[\w./-]+\.\w+:\d+(?::\d+)?:/.test(text)) return 'term';
+    if (/Traceback \(most recent call last\)|\b(error|warning|note):|[\w./-]+\.\w+:\d+(?::\d+)?:/.test(text)) return 'term';
     /* 首行像命令（$、#!、命令名）就以 shell 为准：heredoc 里嵌着代码也算 shell 会话 */
     var head = firstLine(text);
+    if (/^PS [A-Za-z]:\\|^[A-Z][a-z]+-[A-Z][A-Za-z]+\b/.test(head)) return 'powershell';
     if (/^(\$|#!)/.test(head) || SH_KNOWN.test(head.split(/[\s;|&]+/)[0])) return 'sh';
+    /* Python 放在 js 之前：`import x` 两边都有，Python 的 def/class 冒号、from…import、self. 更有辨识度 */
+    if (/(^|\n)[ \t]*(def [A-Za-z_]\w*\s*\(|class [A-Za-z_]\w*\s*[:(]|from [\w.]+ import |import [\w.]+(\s+as\s+\w+)?[ \t]*(\n|$)|if __name__\s*==|@dataclass|with open\(|try:|except\b[^\n]*:)/.test(text) || /\bself\.\w+|\bprint\(/.test(text)) return 'python';
     if (/#[ \t]*include\b|\bstd::|\bint\s+main\s*\(|\bcout\b|\bcin\b|\bendl\b|\b(?:vector|string|map|set|pair|queue|stack)\s*<|\bnullptr\b|\bconstexpr\b|\b(int|double|void|char|long|float|bool|auto)\s+\w+\s*[=;(]/.test(text)) return 'cpp';
     if (/<(!doctype|html|head|body|div|span|nav|section|article|ul|ol|li|table|tr|td|th|h[1-6]|script|link|meta|button|input|form|img|pre|code|a)\b/i.test(text)) return 'html';
     if (/(^|\n)\s*[[{][\s\S]*"\s*:/.test(text)) return 'json';
@@ -198,25 +228,110 @@
     el.innerHTML = html;
   }
 
-  /* 语言从最近的 data-lang 容器上取；没写就猜 */
+  /* ── 语言名归一：data-lang 的写法 → 规范 id ──
+     规范 id 优先对上 Prism 的语法名（python/bash/powershell/markup/…）；
+     Prism 没有的（term）或 Prism 没加载时，退回上面 LANGS 的自研正则（sh/html/js 是它的名字）。 */
+  var ALIAS = {
+    py: 'python', python: 'python', python3: 'python',
+    sh: 'bash', bash: 'bash', shell: 'bash', zsh: 'bash', console: 'bash',
+    ps: 'powershell', ps1: 'powershell', powershell: 'powershell', pwsh: 'powershell',
+    html: 'markup', xml: 'markup', markup: 'markup', svg: 'markup',
+    js: 'javascript', javascript: 'javascript', ts: 'javascript',
+    json: 'json', css: 'css', sql: 'sql', sqlite: 'sql',
+    cpp: 'cpp', 'c++': 'cpp', c: 'c', yaml: 'yaml', yml: 'yaml',
+    term: 'term', text: 'text', txt: 'text', plain: 'text', output: 'text'
+  };
+  /* 规范 id → 自研正则引擎的名字（Prism 缺席时的兜底） */
+  var LEGACY = { bash: 'sh', markup: 'html', javascript: 'js', json: 'json', cpp: 'cpp', c: 'cpp', term: 'term' };
+  /* 角标上显示的名字（Obsidian 式：右上角写语言名） */
+  var LABEL = {
+    python: 'Python', bash: 'Shell', powershell: 'PowerShell', markup: 'HTML', javascript: 'JavaScript',
+    json: 'JSON', css: 'CSS', sql: 'SQL', cpp: 'C++', c: 'C', yaml: 'YAML', term: '终端输出', text: '文本'
+  };
+
+  /* 语言从最近的 data-lang 容器上取（归一成规范 id）；没写就猜；猜不出返回 null */
   function langOf(block, holder) {
     var scope = block.closest('[data-lang]') || holder.closest('[data-lang]');
     var attr = scope && scope.getAttribute('data-lang');
-    if (attr) return Object.prototype.hasOwnProperty.call(LANGS, attr) ? attr : null;   /* text 及未知值 = 不上色 */
-    return detect((holder.textContent || ''));
+    if (attr) {
+      var key = attr.toLowerCase();
+      return Object.prototype.hasOwnProperty.call(ALIAS, key) ? ALIAS[key] : 'text';   /* 未知值 = 不上色 */
+    }
+    var guess = detect(holder.textContent || '');
+    return guess ? ALIAS[guess] : null;
+  }
+
+  /* ── Prism 接入 ──
+     上色：Prism 的 token 类（keyword/string/…）经 wrap 钩子追加成 Sayo 的 .syn-*，
+           于是配色仍由 sayo.css（暗）+ learn-theme.css（亮）给，不引入 Prism 主题。
+     工具栏：Prism 官方插件 toolbar + show-language（语言角标）+ copy-to-clipboard（复制按钮），
+           按钮只显示图标（样式照 VitePress，见 learn-theme.css），文案经 <html data-prismjs-copy*> 写成中文、只给读屏。 */
+  var SYN = {
+    comment: 'syn-comment', prolog: 'syn-comment', doctype: 'syn-macro', cdata: 'syn-comment',
+    keyword: 'syn-keyword', boolean: 'syn-keyword', important: 'syn-keyword', atrule: 'syn-keyword', constant: 'syn-keyword',
+    string: 'syn-string', char: 'syn-string', 'attr-value': 'syn-string', regex: 'syn-string',
+    'triple-quoted-string': 'syn-string', 'template-string': 'syn-string', url: 'syn-string',
+    'function': 'syn-func', 'attr-name': 'syn-func', property: 'syn-func',
+    'class-name': 'syn-type', builtin: 'syn-type', tag: 'syn-type', selector: 'syn-type', variable: 'syn-type', namespace: 'syn-type',
+    decorator: 'syn-macro', annotation: 'syn-macro', directive: 'syn-macro', macro: 'syn-macro', shebang: 'syn-macro',
+    operator: 'syn-operator', number: 'syn-number'
+  };
+  var prismReady = false;
+  function setupPrism() {
+    var P = global.Prism;
+    if (!P || !P.plugins || !P.plugins.toolbar) return null;
+    if (prismReady) return P;
+    prismReady = true;
+    P.hooks.add('wrap', function (env) {
+      var names = [env.type].concat(env.alias || []);
+      for (var i = 0; i < names.length; i++) {
+        var cls = SYN[names[i]];
+        if (cls && env.classes.indexOf(cls) < 0) { env.classes.push(cls); break; }
+      }
+    });
+    var html = document.documentElement;
+    if (!html.hasAttribute('data-prismjs-copy')) {
+      html.setAttribute('data-prismjs-copy', '复制代码');   /* 只给读屏：按钮视觉上只有图标 */
+      html.setAttribute('data-prismjs-copy-success', '已复制');
+      html.setAttribute('data-prismjs-copy-error', '按 Ctrl+C 复制');
+      html.setAttribute('data-prismjs-copy-timeout', '2000');   /* 与 VitePress 一致：2 秒后图标复原 */
+    }
+    return P;
+  }
+
+  var SYN_ANY = '.syn-comment, .syn-keyword, .syn-string, .syn-func, .syn-type, .syn-macro, .syn-operator, .syn-number';
+
+  function decorate(code, P) {
+    var pre = code.parentNode;
+    if (pre.parentNode && pre.parentNode.classList && pre.parentNode.classList.contains('code-toolbar')) return;  /* 已处理过（幂等） */
+    var handwritten = !!code.querySelector(SYN_ANY);
+    var lang = langOf(code, pre);
+    var id = lang || 'text';
+    pre.setAttribute('data-language', LABEL[id] || id);
+    if (!handwritten && lang && P.languages[lang]) {
+      code.classList.add('language-' + lang);
+      P.highlightElement(code);            /* 'complete' 钩子里 toolbar 插件自动挂上角标与复制按钮 */
+      return;
+    }
+    /* Prism 没有的语法（term）或手写过 .syn-* 的块：颜色走自研正则或保留手写，只挂工具栏 */
+    if (!handwritten && lang && LEGACY[lang]) highlightBlock(code, LEGACY[lang]);
+    P.plugins.toolbar.hook({ element: code, language: id });
   }
 
   function highlightAll(scope) {
     var root = scope || document;
+    var P = setupPrism();
 
     var codes = root.querySelectorAll('pre > code');
     for (var i = 0; i < codes.length; i++) {
       var code = codes[i];
-      if (code.querySelector('.syn-comment, .syn-keyword, .syn-string, .syn-func, .syn-type, .syn-macro, .syn-operator, .syn-number')) continue;
+      if (P && !code.closest('.syo-editor')) { decorate(code, P); continue; }   /* 编辑器块自带标题栏，不挂工具栏 */
+      if (code.querySelector(SYN_ANY)) continue;
       var lang = langOf(code, code.parentNode);
-      if (lang) highlightBlock(code, lang);
+      if (lang && LEGACY[lang]) highlightBlock(code, LEGACY[lang]);
     }
 
+    /* .syo-editor（带标题栏与行号的编辑器块）逐行上色，仍走自研正则 */
     var editors = root.querySelectorAll('.syo-editor-code');
     for (var j = 0; j < editors.length; j++) {
       var box = editors[j];
@@ -224,8 +339,8 @@
       var lines = box.querySelectorAll('.line');
       if (!lines.length) continue;
       var elang = langOf(box, box.closest('.syo-editor') || box);
-      if (!elang) continue;
-      for (var k = 0; k < lines.length; k++) highlightBlock(lines[k], elang);
+      if (!elang || !LEGACY[elang]) continue;
+      for (var k = 0; k < lines.length; k++) highlightBlock(lines[k], LEGACY[elang]);
     }
   }
 

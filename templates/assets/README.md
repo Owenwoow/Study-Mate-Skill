@@ -5,15 +5,22 @@
 
 ## 目录职责
 
+> **哪些文件属于共享层／课件层，清单只有一份**：`scripts/lessonfile.py` 的
+> `SHARED_DIRS` / `SHARED_FILES` / `SUBJECT_FILES`（生成器与预览都照它拷）。
+> 下面这张表解释每个文件是什么；**新增文件要登记进那份清单**，否则它既不会被拷进工作区，
+> 也不会被 `test_templates.py` 的逐字节比对看住。
+
 | 路径 | 是什么 | 谁维护 |
 |------|--------|--------|
 | `sayo/` | **Sayo UI**（自研零依赖 CSS 框架 + 交互引擎），MIT。含 `sayo.css`、`sayo.js`、`icons/`、`LICENSE` | 从 sayo-ui 项目整体拷贝，**不要手改** |
 | `learn-theme.css` | 本项目**共享主题层**：亮色=暖纸白+深绿（覆盖 `--syo-*`）、暗色=用 Sayo 默认的 Primer 暗色；修正 Sayo 里为暗色硬编码的紫色光晕；放跨页面组件（进度条、状态徽标、筛选、空状态） | 本项目自研，改色只改这里 |
 | `learn-theme.js` | **共享行为层**：① 主题（亮/暗）逻辑——早期应用、切换并持久化、绑定开关（`LearnTheme.apply/set/toggle/current/wire`）；② **代码块高亮**——课件里的 `<pre><code>` 与 `.syo-editor` 加载即自动上色（`LearnTheme.highlight`）。三个页面共用，别各写一份 | 本项目自研 |
 | `prism/` | **PrismJS 1.30.0**（MIT，npm `prismjs` 打包）：`prism.js` = core + 语法（markup css clike javascript c cpp python bash powershell json sql yaml）+ 插件 toolbar / show-language / copy-to-clipboard；`prism-toolbar.css` = 工具栏基础样式；`LICENSE` | 从 npm 包拼接，**不要手改**；要加语法就重新拼 `prism.js`（文件头注释写明了拼了哪些） |
+| `katex/` | **KaTeX 0.18.7**：离线数学排版。JS/CSS 使用 MIT（见 `katex/LICENSE`）；20 个 `fonts/*.woff2` 字体的嵌入许可为 SIL OFL 1.1（见 `katex/fonts/LICENSE`）。**已裁剪**：CSS 里去掉了 woff/ttf 回退，只留 woff2 | 从 KaTeX 官方 dist 拷贝，保留代码与字体的许可证，**不要手改字体**（更新步骤见下） |
+| `lesson-math.js` | **公式渲染**：页面加载后把 `.math-inline` / `.math-block` 里的 TeX 交给 KaTeX 排版。降级可读——KaTeX 没加载成功时元素里留着的就是 TeX 原文 | 本项目自研；**只有含公式的课件页引用它** |
 | `learn-mascot.png` | **抬头看板娘**（640×425，256 色带 alpha，23KB）：透明底 + 底部羽化，给根主页抬头当主视觉（`.learn-hero__mascot`） | 本项目自研；**只有根主页引用它**，科目页与课件不引用 |
 | `style.css` | **课件层**（讲解排版 + 练习样式），叠在 Sayo 之上 | 本项目自研；Task 8 拷进每个科目 |
-| `quiz.js` | 课件**题目组件**（选择题即时反馈 + 开放题点开对照参考答案与判分要点）。数据契约以它顶部注释为准 | 同上 |
+| `quiz.js` | 课件**题目组件**（选择题即时反馈 + 开放题点开对照参考答案与判分要点）；题面/选项/解析里的 `$…$` 交给 `lesson-math.js` 排版（KaTeX 不在时占位元素里留着的 TeX 原文可读）。数据契约以它顶部注释为准 | 同上 |
 | `lesson-toc.js` | 课件**侧边目录 + 上/下节课入口**：目录按页面 `<h2>` 自动生成；正文里的 `<nav class="lesson-nav">`（**渲染器按 `curriculum.yaml` 算出来的真实链接**）会被搬到目录下面。样式照搬 sayo-ui 文档页的 `.doc-sidebar`（可折叠成 rail、≤768px 变抽屉 + 汉堡），高亮交给 Sayo 的 `data-syo-scrollspy` | 同上 |
 
 ## 在工作区里的落地位置与引用路径
@@ -25,9 +32,11 @@
     ├── assets/                                 # ← 全工作区共享一份
     │   ├── sayo/{sayo.css,sayo.js,icons/,LICENSE}
     │   ├── prism/{prism.js,prism-toolbar.css,LICENSE}
+    │   ├── katex/{katex.min.css,katex.min.js,fonts/*.woff2,fonts/LICENSE,LICENSE}
     │   ├── learn-theme.css
     │   ├── learn-theme.js
-    │   └── learn-mascot.png
+    │   ├── learn-mascot.png
+    │   └── lesson-math.js
     └── subjects/<slug>/
         ├── index.html                          # 科目主页（生成产物）
         ├── assets/                             # ← 每个科目一份（Task 8 从 templates/assets/ 拷）
@@ -47,7 +56,7 @@
 |------|-----------|-------------|
 | 根主页 `<WS>/index.html` | `.learning/assets/sayo/sayo.css`<br>`.learning/assets/learn-theme.css`<br>`.learning/assets/learn-theme.js`<br>`.learning/assets/sayo/sayo.js`<br>`.learning/assets/learn-mascot.png`（抬头看板娘，`<img>`） | — |
 | 科目主页 `<WS>/.learning/subjects/<slug>/index.html` | `../../assets/sayo/sayo.css`<br>`../../assets/learn-theme.css`<br>`../../assets/learn-theme.js`<br>`../../assets/sayo/sayo.js` | `assets/style.css` |
-| 课件 `<WS>/.learning/subjects/<slug>/lessons/<NNNN>-<节点id>.html`<br>（由 `scripts/render_lesson.py` 从 `<NNNN>-<节点id>.md` + `.quiz.json` 渲染产出；`templates/lesson.html` 是占位符壳，**不要手工拷贝**） | `../../../assets/sayo/sayo.css`<br>`../../../assets/prism/prism-toolbar.css`<br>`../../../assets/prism/prism.js`（`data-manual`）<br>`../../../assets/learn-theme.css`<br>`../../../assets/learn-theme.js`<br>`../../../assets/sayo/sayo.js` | `../assets/style.css`<br>`../assets/quiz.js`<br>`../assets/lesson-toc.js` |
+| 课件 `<WS>/.learning/subjects/<slug>/lessons/<NNNN>-<节点id>.html`<br>（由 `scripts/render_lesson.py` 从 `<NNNN>-<节点id>.md` + `.quiz.json` 渲染产出；`templates/lesson.html` 是占位符壳，**不要手工拷贝**） | `../../../assets/sayo/sayo.css`<br>`../../../assets/prism/prism-toolbar.css`<br>`../../../assets/prism/prism.js`（`data-manual`）<br>`../../../assets/learn-theme.css`<br>`../../../assets/learn-theme.js`<br>`../../../assets/sayo/sayo.js`<br>`../../../assets/katex/katex.min.css`<br>`../../../assets/katex/katex.min.js`<br>`../../../assets/lesson-math.js`<br>（**后三条按需**：页面里出现 `.math-inline` / `.math-block` 时才注入，非数学课与老课件零改动） | `../assets/style.css`<br>`../assets/quiz.js`<br>`../assets/lesson-toc.js` |
 
 > 路径提示：课件在 `.learning/subjects/<slug>/lessons/` 下，向上三层就是 `.learning/`，
 > 所以共享层是 `../../../assets/…`（不要再写一层 `.learning`）；科目内组件则是 `../assets/…`。
@@ -90,17 +99,33 @@ cp <sayo-ui>/sayo.css <sayo-ui>/sayo.js <sayo-ui>/LICENSE templates/assets/sayo/
 cp -r <sayo-ui>/icons templates/assets/sayo/icons
 ```
 
-`learn-theme.css`、`learn-theme.js`、`style.css`、`quiz.js`、`lesson-toc.js` 是自研文件，**不要**被上游覆盖。
+`learn-theme.css`、`learn-theme.js`、`lesson-math.js`、`style.css`、`quiz.js`、`lesson-toc.js` 是自研文件，
+**不要**被上游覆盖。
+
+## 更新 KaTeX 的方式
+
+代码许可证来自 [KaTeX 官方仓库](https://github.com/KaTeX/KaTeX/blob/v0.18.7/LICENSE)。字体的版权主体、年份和保留字体名称来自随包 20 个 WOFF2 的嵌入元数据：Design Science, Inc.（2009–2010）与 Khan Academy（2014–2018）；版权与许可也核对了官方字体仓库的 [KaTeX_Main-Regular.ttf](https://github.com/KaTeX/katex-fonts/blob/master/fonts/KaTeX_Main-Regular.ttf)。`katex/fonts/LICENSE` 汇总这些已有声明，并附 [SIL 官方 OFL 1.1 原文](https://openfontlicense.org/documents/OFL.txt)。本项目未修改字体文件。
+
+```bash
+npm pack katex@<版本> && tar xzf katex-*.tgz
+cp package/dist/katex.min.js package/LICENSE templates/assets/katex/
+cp package/dist/fonts/*.woff2 templates/assets/katex/fonts/
+# 保留 fonts/LICENSE；升级字体时核对嵌入版权与保留字体名称，必要时同步更新该文件
+# 再把 dist/katex.min.css 裁剪成只留 woff2（去掉 woff / ttf 两条回退），并在文件头写一行来源与裁剪说明
+```
+
+裁剪后 `url(fonts/…)` 应只剩 `.woff2`；改完跑一次 `bash scripts/tests/run_tests.sh`（渲染器套件里有公式用例）。
 
 ## 新增共享文件时（容易漏）
 
-共享层的清单分散在三处，新增/改名时必须同时改，否则页面会静默少加载一个文件：
+共享层的清单（拷哪些目录与文件）**只有一份**：`scripts/lessonfile.py` 的 `SHARED_DIRS` / `SHARED_FILES`——
+`gen_home.py` 与 `preview_templates.py` 都照它拷。新增/改名时要同步的只有：
 
-1. `templates/assets/README.md`（本文件的表格与目录树）
-2. `scripts/preview_templates.py` 里的 `shared_files` / `shared_dirs`
+1. `scripts/lessonfile.py` 的 `SHARED_DIRS` / `SHARED_FILES`（真正决定拷什么的那一处）
+2. `templates/assets/README.md`（本文件的表格与目录树）
 3. `references/工程约束.md` 的「前端技术选型」与「目录与规则归属」（共享层那份清单）
 
 ## 谁在哪里落地
 
 - **总控建科目**：只拷 `style.css`、`quiz.js`、`lesson-toc.js` 到 `<subject>/assets/`，别把 `sayo/` 再拷一遍
-- **`gen_home.py`**：负责共享层（`sayo/` + `learn-theme.css/js`）就位，幂等；缺资源页面会退化成裸 HTML
+- **`gen_home.py`**：负责共享层（`sayo/` + `katex/` + `prism/` 三个目录，加 `learn-theme.css/js`、`learn-mascot.png`、`lesson-math.js`）就位，幂等；缺资源页面会退化成裸 HTML

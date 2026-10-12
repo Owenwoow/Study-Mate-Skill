@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""课件质量检查：只阻断工程/结构缺项；内容风格类问题只提示，不影响放行。
+r"""课件质量检查：只阻断工程/结构缺项；内容风格类问题只提示，不影响放行。
 
 用法：
   python3 scripts/check_lesson.py <课件路径> [<课件路径> ...] [--subject <科目目录>] [--node <节点id>]
@@ -51,6 +51,17 @@
     9 图片：<img> 引用的**本地**文件必须真实存在——学生看到裂图是工程缺陷，必须拦。
        gen_home 的链接自检只管它自己写出的主页（根主页 + 科目主页），课件页不在它范围内。
        内联 <svg> 不引用文件，这条不管。
+   10 本地引用可达：页面里所有 href/src 的**本地**目标必须真实存在——组件、图片、正文里的
+       链接、lab 链接都算。第 9 项只管 <img>，这条管其余全部：页面缺了组件文件、或正文里那条
+       lab 链接指错了文件名，检查照样全绿而学生点开是白板 / 404。
+       跳过三类：外链与锚点（http(s)、协议相对 //、mailto:、data:、`#…`）；HTML 注释里的
+       示例路径；上/下节课指针（落空是设计内的，第 8 项只提示）。
+       另有一条**生成产物**：指向 `index.html`（壳里那条「返回课程」回链，目标是 gen_home.py
+       的产物）而它还没生成时只提示——作者产不出这个文件，缺了是流水线顺序问题，不是课件缺陷。
+   11 数学式：页面里有 `.math-inline` / `.math-block` **或**题库数据（`data-quiz`）里带 `$…$`
+       公式时，壳里必须引用离线 KaTeX 三件（katex/katex.min.css、katex/katex.min.js、
+       lesson-math.js）。**条件判定**：都没有就不要求——老课件与非数学课因此零改动。
+       少了引用，公式只显示 TeX 原文（题面里的也一样），等于没排版。
   提示项（只回显、退出码不受影响）——质量线，值得看一眼：
     · 题面/答案的散文里出现 Markdown/HTML 标记（`**加粗**`、行内反引号、`# 标题`、`- 列表`、
       `<b>`）：字段是**纯文本**，这些会原样显示（换行用 `\n`、代码用 ``` 围栏）。
@@ -61,6 +72,8 @@
     · 图片用了外链（http/https 或其他 scheme）：离线打开会裂；建议从科目图片库
       `assets/img/pool/` 挑一张本地文件引用。
     · 图片缺 alt：裂图时学生只看到空白，读屏软件也读不出。
+    · 方程组少了 `\left\{ … \right.` 大括号（aligned 里 ≥2 行等式却没被包住）：
+      KaTeX 不会自己加，少了读者会当成几个独立结论。
 
 本检查**不判内容风格**：真实场景、术语来历、怎么分节与标题怎么写，都是 lesson-design 的
 着眼点与倾向，由讲解角色按内容与学生偏好现场定；检查不用关键词词表去替它做判断——那种代理会把
@@ -81,6 +94,11 @@ import sys
 from html.parser import HTMLParser
 from urllib.parse import unquote
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import curriculum    # noqa: E402  课程大纲的唯一口径（位次/课型/邻居）
+import lessonfile    # noqa: E402  文件名与引用清单的唯一口径
+import lessonfmt     # noqa: E402  围栏判定的唯一口径（与渲染器同一份）
+
 try:
     import yaml
 except ImportError:      # pragma: no cover - 环境缺 pyyaml 时降级
@@ -91,12 +109,8 @@ except ImportError:      # pragma: no cover - 环境缺 pyyaml 时降级
 # 检查项 1：课件文件名与同目录编号（R4）
 # 节点 id 允许点号分段（如 hello.first、exp.first-blood、cpp.stl），文件名沿用同一 id，
 # 所以短横线之外还要容许点号；分隔符不许连续、不许落在结尾。
-LESSON_NAME_RE = re.compile(r'^(\d{4})-(?:[a-z0-9]+[.-])*[a-z0-9]+\.html$')
-NUMBERED_NAME_RE = re.compile(r'^(\d{4})-.*\.html$')
 
 # 检查项 2/3：共享层与科目组件引用（按 href/src 属性值比对，不吃注释里的路径）
-SHARED_REFS = ('sayo.css', 'learn-theme.css', 'learn-theme.js', 'sayo.js')
-SUBJECT_REFS = ('../assets/style.css', '../assets/quiz.js')
 
 # 检查项 4（提示）：字段是纯文本，这些 Markdown/HTML 标记不会被解析、会原样显示。
 # 保守集合：`1. ` 这类行首编号**不算**——作者的枚举写法本来就是这样；围栏里的内容不看。
@@ -109,12 +123,10 @@ MARKDOWN_RE = (
     re.compile(r'</?[a-zA-Z][a-zA-Z0-9]*[ >/]'),  # <b> 之类
 )
 
-# 检查项 9：图片 src 是否外链（任何 scheme: 或协议相对 //，与 gen_home 的 SCHEME_RE 同口径）
-IMG_SCHEME_RE = re.compile(r'^(?:[A-Za-z][A-Za-z0-9+.\-]*:|//)')
+# 检查项 9/10：引用是否外链——口径在 lessonfile.SCHEME_RE（渲染器与主页生成器同一份）
 
 # 检查项 4：题目结构里的 ``` 围栏（与 templates/assets/quiz.js 的渲染口径一致）
-# 围栏行 = 行首可有缩进 + 三个反引号 + 可选语言标签；行内的单个反引号不算。
-QUIZ_FENCE_RE = re.compile(r'^[ \t]*```[ \t]*[A-Za-z0-9+#.-]*[ \t]*$')
+# 围栏行判定（含「起止各占一整行」的简单形状）在 lessonfmt 里——与渲染器同一份。
 
 # 检查项 4：每题选项最长与最短的长度差**提示**阈值（R5）——超过只提示，不阻断
 MAX_OPT_LEN_GAP = 4
@@ -124,6 +136,12 @@ MAX_H2_CHARS = 14
 
 # 检查项 6：主题开关元素 id
 THEME_CHECKBOX_ID = 'lesson-theme-checkbox'
+
+# 检查项 11：有数学式的页面必须引用离线 KaTeX（渲染器写出的 .math-inline / .math-block）
+MATH_MARK_RE = re.compile(r'class="[^"]*\bmath-(?:inline|block)\b', re.I)
+# 题目正文（data-quiz 里）的公式：静态看不到 .math-inline 元素，得扫属性
+QUIZ_ATTR_RE = re.compile(r'data-quiz\s*=\s*(["\'])(.*?)\1', re.S)
+MATH_PAIR_RE = re.compile(r'\$[^\s$][^$\n]*[^\s$]\$|\$[^\s$]\$')
 
 # 检查项 7：手写课件时代留下的题目位置标记（新流程由渲染器出页面；骨架注释里是示例，路径不同）
 PLACEHOLDER_RE = re.compile(r'^[ \t]*<!--[ \t]*题目位置', re.M)
@@ -147,6 +165,20 @@ def ref_values(text):
     return REF_ATTR_RE.findall(text)
 
 
+def local_target(path, value):
+    """把页面里的引用值解析成磁盘路径；外链、锚点、空值返回 None。
+
+    与检查项 9 同口径：先去掉 `#…` 与 `?…`，`%xx` 解码，再按页面所在目录解析。
+    """
+    raw = html.unescape(value).strip()
+    if not raw or raw.startswith('#') or lessonfile.SCHEME_RE.match(raw):
+        return None
+    relative = unquote(raw.split('#', 1)[0].split('?', 1)[0])
+    if not relative:
+        return None
+    return os.path.normpath(os.path.join(os.path.dirname(path) or '.', relative))
+
+
 # ── 科目数据：节点的课型（curriculum.yaml 的 kind）──────────────────────────
 
 
@@ -154,64 +186,33 @@ class SubjectData:
     """读 <科目>/curriculum.yaml，记下每个节点的 `kind`（概念／实操／实验）。
 
     课型决定检查怎么判实操：`概念` 不配 lab；`实操` 与 `实验` 必须有 lab 与产物。
+    位次、课型、前后邻居的唯一口径在 `curriculum` 模块——这里只把「读不出来」
+    翻成检查器自己的结果（哪些检查项降级成提示、哪些直接失败）。
     """
 
     def __init__(self, subject_dir):
         self.dir = subject_dir
-        self.kinds = {}
-        self.order = []
-        self.error = None
-        if yaml is None:
-            self.error = '未安装 pyyaml'
-            return
-        path = os.path.join(subject_dir, 'curriculum.yaml')
-        try:
-            with open(path, encoding='utf-8') as handle:
-                curriculum = yaml.safe_load(handle) or {}
-        except (OSError, UnicodeDecodeError) as exc:
-            self.error = f'读不出 {path}（{exc}）'
-            return
-        except Exception as exc:                      # yaml.YAMLError 及结构异常
-            self.error = f'{path} 不是合法 YAML（{exc}）'
-            return
-        nodes = curriculum.get('nodes') if isinstance(curriculum, dict) else None
-        if not isinstance(nodes, list):
-            self.error = f'{path} 的 nodes 必须是节点数组'
-            return
-        for position, node in enumerate(nodes, 1):
-            node_id = node.get('id') if isinstance(node, dict) else None
-            if not isinstance(node_id, str) or not re.fullmatch(r'[a-z0-9]+([.-][a-z0-9]+)*', node_id):
-                self.error = f'{path} 的 nodes 第 {position} 项缺少合法的节点 id'
-                return
-            if node_id in self.kinds:
-                self.error = f'{path} 里有重复 id: {node_id}'
-                return
-            self.kinds[node_id] = str(node.get('kind') or '').strip()
-            self.order.append(node_id)
+        cur, problems = curriculum.load(subject_dir)
+        self.error = problems[0].message if problems else None
+        self._cur = cur
 
     def kind_of(self, node):
-        return self.kinds.get(str(node)) or None
+        return (self._cur.kind_of(node) or None) if self._cur is not None else None
 
     def index_of(self, node):
         """节点在 `nodes:` 里的序号（从 1 起；课件编号就用它）；不在大纲里返回 None。"""
-        try:
-            return self.order.index(str(node)) + 1
-        except ValueError:
-            return None
+        return self._cur.index_of(node) if self._cur is not None else None
 
     def neighbors(self, node):
         """(上一个节点 id, 下一个节点 id)——到头的那个是 None。"""
-        index = self.index_of(node)
-        if index is None:
+        if self._cur is None:
             return None, None
-        prev_id = self.order[index - 2] if index >= 2 else None
-        next_id = self.order[index] if index < len(self.order) else None
-        return prev_id, next_id
+        return self._cur.neighbors(self._cur.index_of(node))
 
 
 def lab_number_of(path):
     """课件编号（0002 → 2）；文件名不合格时返回 None，交给检查项 1 报。"""
-    match = LESSON_NAME_RE.match(os.path.basename(path))
+    match = lessonfile.LESSON_NAME_RE.match(os.path.basename(path))
     return int(match.group(1)) if match else None
 
 
@@ -292,7 +293,7 @@ def check_name(path):
     """检查项 1：文件名 NNNN-dash-case.html + 同目录编号规则（R4）。"""
     problems = []
     name = os.path.basename(path)
-    match = LESSON_NAME_RE.match(name)
+    match = lessonfile.LESSON_NAME_RE.match(name)
     if not match:
         problems.append(f'文件名 {name!r} 不符合 NNNN-dash-case.html（四位数字 + 小写短横线）')
         return problems
@@ -309,7 +310,7 @@ def check_name(path):
     for entry in entries:
         if entry == name:
             continue
-        other = NUMBERED_NAME_RE.match(entry)
+        other = lessonfile.NUMBERED_NAME_RE.match(entry)
         if other:
             others.append(int(other.group(1)))
 
@@ -328,14 +329,14 @@ def check_name(path):
 def check_shared_refs(text):
     """检查项 2：共享层引用齐全（sayo.css / learn-theme.css / learn-theme.js / sayo.js）。"""
     refs = ref_values(text)
-    return [f'共享层引用缺失：{required}' for required in SHARED_REFS
+    return [f'共享层引用缺失：{required}' for required in lessonfile.SHARED_REFS
             if not any(required in ref for ref in refs)]
 
 
 def check_subject_refs(text):
     """检查项 3：科目组件引用齐全（../assets/style.css、../assets/quiz.js）。"""
     refs = ref_values(text)
-    return [f'科目组件引用缺失：{required}' for required in SUBJECT_REFS
+    return [f'科目组件引用缺失：{required}' for required in lessonfile.SUBJECT_REFS
             if not any(required in ref for ref in refs)]
 
 
@@ -686,7 +687,7 @@ def check_quiz_fences(item, label):
         value = item.get(field)
         if not isinstance(value, str):
             continue
-        fences = sum(1 for line in value.split('\n') if QUIZ_FENCE_RE.match(line))
+        fences = sum(1 for line in value.split('\n') if lessonfmt.is_simple_fence_line(line))
         if fences % 2:
             problems.append(f'{label}的 `{field}` 里 ``` 围栏没闭合（起止各占一整行，'
                             f'中间才是代码）——不闭合的话后半段会被整段渲染成代码块')
@@ -707,7 +708,7 @@ def check_quiz_markdown(item, label):
             continue
         prose, inside = [], False
         for line in value.split('\n'):
-            if QUIZ_FENCE_RE.match(line):
+            if lessonfmt.is_simple_fence_line(line):
                 inside = not inside
                 continue
             if not inside:
@@ -857,7 +858,7 @@ def check_images(text, path):
         if not value:
             problems.append('<img> 没有 src')
             continue
-        if IMG_SCHEME_RE.match(value):
+        if lessonfile.SCHEME_RE.match(value):
             notes.append(f'图片用了外链（{value[:60]}）——离线打开会裂；'
                          f'建议从科目图片库 assets/img/pool/ 挑本地文件引用')
         else:
@@ -868,6 +869,86 @@ def check_images(text, path):
         if not (alt or '').strip():
             notes.append(f'图片缺 alt（{value[:40]}）：裂图时学生只看到空白')
     return problems, notes
+
+
+def check_local_refs(text, path):
+    """检查项 10：页面里所有本地 href/src 都要能落到真实文件；返回 (problems, notes)。
+
+    gen_home 的断链自检只管它自己写出的主页，课件页不在它的范围内——没有这道，页面缺组件、
+    正文里的 lab 链接指错文件，检查全绿而学生点开是白板或 404。
+
+    跳过：外链与锚点（任何 scheme: 或协议相对 //、`#…`）；上/下节课指针（落空是设计内的，
+    检查项 8 单独提示）。注释里的路径不会走到这里——`check_file` 传进来的已经是剥过注释的文本。
+
+    **生成产物单算**：`index.html`（壳里那条「返回课程」回链的目标）由 gen_home.py 产出，
+    作者产不出来——还没生成时只提示，不阻断（否则每门新科目在跑生成器之前都过不了检查）。
+    """
+    allowed = {value for value in nav_links(text).values() if value}
+    problems = []
+    notes = []
+    seen = set()
+    for value in ref_values(text):
+        raw = html.unescape(value).strip()
+        if not raw or raw in allowed or raw in seen:
+            continue
+        target = local_target(path, raw)
+        if target is None:
+            continue
+        seen.add(raw)
+        if os.path.exists(target):
+            continue
+        if os.path.basename(target) == 'index.html':
+            notes.append(f'科目主页还没生成（{raw} → {target}）：跑一次 gen_home.py 就有了')
+        else:
+            problems.append(f'引用了不存在的本地文件：{raw}（解析到 {target}）')
+    return problems, notes
+
+
+def page_has_math(text):
+    """页面里有没有数学式：静态占位（`.math-inline` / `.math-block`）**或**题库数据里的 `$…$`。
+
+    题目正文由 quiz.js 在浏览器里排版，渲染产物里只有 `data-quiz` 属性——只看占位元素会漏掉
+    「整页的公式都在题面里」那种页面，而那正是线代/概率这类课件的常态。
+    """
+    if MATH_MARK_RE.search(text):
+        return True
+    # 属性引号必须**配对**捕获：JSON 的键都是双引号，用 ["'] 会把内容截在第一个 " 上
+    return any(MATH_PAIR_RE.search(html.unescape(match.group(2)))
+               for match in QUIZ_ATTR_RE.finditer(text))
+
+
+def check_math_style(text):
+    r"""质量线（只提示）：`aligned` 里有两行以上等式，却没被 `\left\{ … \right.` 包住。
+
+    这是方程组最容易被漏掉的一处：KaTeX 不会自己加括号，少了大括号读者会把一列等式当成几个
+    独立结论（规格见 references/课件内容格式.md 第 3 节的「方程组要带大括号」）。判据保守——
+    只在「同一段 aligned 里 ≥2 行带 `&=`」且紧邻上文没有 `\left\{` 时提示，推导链
+    （`\xrightarrow`）与单条恒等式都不会命中。**只提示，不阻断**：它拦不了交付，只提醒补一下。
+    """
+    notes = []
+    for match in re.finditer(r'\\begin\{aligned\}(.*?)\\end\{aligned\}', text, re.S):
+        body = html.unescape(match.group(1))
+        if body.count('&=') < 2:
+            continue
+        if '\\left\\{' in text[max(0, match.start() - 12):match.start()]:
+            continue
+        notes.append('这段 aligned 有两行以上等式、却没有大括号——方程组要写成 '
+                     r'`$$\left\{\begin{aligned} … \end{aligned}\right.$$`'
+                     '（KaTeX 不会自己加，见 references/课件内容格式.md 第 3 节）')
+    return notes
+
+
+def check_math_refs(text):
+    """检查项 11：有数学式的页面必须引用离线 KaTeX（三件）。
+
+    条件判定，与检查项 5（按 `kind` 判 lab）同一路数：页面里没有 `.math-inline` / `.math-block`
+    就不要求这三个引用。少了它们公式只显示 TeX 原文——能读，但等于没排版。
+    """
+    if not page_has_math(text):
+        return []
+    refs = ref_values(text)
+    return [f'页面里有数学式，但缺少引用：{required}' for required in lessonfile.MATH_REFS
+            if not any(required in ref for ref in refs)]
 
 
 def check_theme_toggle(text):
@@ -913,6 +994,11 @@ def check_file(path, subject=None, node=None):
     problems += nav_problems
     img_problems, img_notes = check_images(text, path)
     problems += img_problems
+    ref_problems, ref_notes = check_local_refs(text, path)
+    problems += ref_problems
+    notes += ref_notes
+    notes += check_math_style(text)
+    problems += check_math_refs(text)
     problems += check_theme_toggle(text)
     problems += check_placeholder(raw, path)
     return problems, notes + lab_notes + nav_notes + img_notes

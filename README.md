@@ -139,7 +139,7 @@ bash scripts/tests/run_tests.sh
 
 | 方面 | DSH 原版 | 本通用版 |
 |---|---|---|
-| 技能组织 | 11 个平级 `SKILL.md`（1 总控 + 5 角色 + 5 协议） | 1 个入口 `SKILL.md` + `references/` 下 10 份参考规格（不会被注册成独立技能） |
+| 技能组织 | 11 个平级 `SKILL.md`（1 总控 + 5 角色 + 6 协议） | 1 个入口 `SKILL.md` + `references/` 下 11 份参考规格（不会被注册成独立技能） |
 | 安装 | `install.sh` / `install.ps1` 装预设到 `~/.dsh/` + npm 包 `@yunmiao/studymate` | 把目录复制到宿主的技能目录；无安装脚本、无 npm 依赖 |
 | 工作区定位 | 读 `~/.dsh/studymate-config.yaml` | 三级定位：`LEARN_WORKSPACE` 环境变量 → `studymate.config.yaml` → `<root>/workspace` |
 | 角色派发 | 只用 DSH 的 `subagent` | **两条路**：宿主有子代理能力就派出去；没有就由总控按角色规格自己串行做（角色边界仍然有效） |

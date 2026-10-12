@@ -39,12 +39,13 @@ license: MIT
      3. `<root>/workspace`（默认，不存在就让生成器建）。
    - **读写一律基于这两个绝对路径，不在会话 cwd 里建或找学习文件**。会话可以在任意目录启动。
 1. **加载 `record-keeping` 并读状态**：按它的「恢复视图」切片读取（共享记忆相关分节 + 当前节点 + 前置节点摘要 + 最近 5 条误解 + 最近 3 条学习记录 + 最近 3 条评估记录 + 实验课进度）。只读需要的部分，别把长文件整份读进来。
+   - **可选方向入口**（首次写记忆之前）：已有明确科目直接走原流程，恢复已有科目不拦截；只有学生说"不知道学什么""帮我选方向"或主动选择探索时，读 `<root>/references/protocols/learning-discovery.md` 并由你亲自执行，学生确认建课前不写任何学习文件
 2. **没有科目**（首次使用）：问三件事——想学什么、当前基础、讲法偏好（一次一件）；写进 `MEMORY.md`，然后走下面的新科目盘问。
 3. **已有科目**：把科目清单摆给学生选项（科目名 + 状态 + 上次学习日期 + 当前节点），或让他报新科目名。
 4. **新科目** → 你亲自走「新科目盘问」，盘完按这个顺序落地：
    1. 建科目文件夹（含 `assessments/`；`lab/` 不预建，见 `record-keeping`）
    2. 写 `MISSION.md`（`## Why` 与 `## Success looks like` 来自盘问第一问；`## Constraints` 收前置基础、时间投入与偏好）与 `subject.yaml` 的 `goal`
-   3. 派 `resource-scout` 收集资料（值：`subject_path` + 盘问结果摘要）：它把清单草稿落到 `/tmp/resource-scout-<slug>/deliver/RESOURCES.md`——你 `cp` 到科目、扫一眼条数与来源域名。**建池与拟大纲并行**——`RESOURCES.md` 落位后，同时派下面两个（别串着等）：
+   3. 派 `resource-scout` 收集资料（值：`subject_path` + 盘问结果摘要 +（可选）本地资料路径 +（可选）可用的转换工具）：**派发前主动问学生有没有准备好的本地教材或讲义路径**（留空则全网检索）；有本地资料就先看清格式，要转换工具（PDF／Word／PPT 转 Markdown）就先问过学生、装好再派。它把清单草稿落到 `<subject_path>/.stage/resource-scout-<slug>/deliver/RESOURCES.md`——你 `cp` 到科目（同一条命令里删掉 `.stage/`）、扫一眼条数与来源域名；本地教材它直接转进 `reference/`，在线来源原文转进 `sources/`。**建池与拟大纲并行**——`RESOURCES.md` 落位后，同时派下面两个（别串着等）：
       ```
       派 resource-scout → cp 落 RESOURCES.md → 写 GLOSSARY.md（## 待掌握 装 5-15 个主题词，写明用日文原词还是中文）→ 同时派两个：
          ├─ image-scout（爬图片库）         ← 值 = RESOURCES.md 的绝对路径 + 点名要抓的条目
@@ -72,7 +73,8 @@ license: MIT
    - **实验课载体**：结合科目性质与技术栈给候选（notebook / 源码+测试 / 页面 / 练习页 / 清单…）让学生定；结果**先随派工 prompt 交给 `practice-evaluator`**（落盘时机见 `record-keeping` 的「科目文件夹」——首个实操/实验节点才建 `lab/`）
 5. **事实不问学生，自评必须问**：`MEMORY.md` 里已有的基础、水平、偏好自己读；**前置基础是学生自评、不是事实**，必问——`MEMORY.md` 里已记过的那几项不重复问
 6. **结束标准**：frontier 空
-7. **分发**：你自己写 `subject.yaml` 与 `MISSION.md`，把盘问摘要随 prompt 传给 `curriculum-designer`（它据此定课程深度、给节点定 `kind`、插实验课）
+7. **从方向探索过来时**：按 `learning-discovery` 的「交接到开课准备」复用已有答案、只问必要缺项；这是同一轮盘问，结束后确认建课，再执行原落地顺序
+8. **分发**：你自己写 `subject.yaml` 与 `MISSION.md`，把盘问摘要随 prompt 传给 `curriculum-designer`（它据此定课程深度、给节点定 `kind`、插实验课）
 
 ## 三、对话节奏：每轮都以「下一步」收尾（硬规则）
 
@@ -94,7 +96,7 @@ license: MIT
 2. **概念课 / 实操课**（**串行两段**，中间不并发）
    - **第一段 · 要正文与锚点**：派 `learning-coach`（值：`subject_path` + 节点 id；**不规定内容怎么写**）。**锚点是讲解的产物，内容文件没落盘就先别派出题人**——两边同时开工必然对不上（出题人编不出同一串文本）
    - **第二段 · 再出题**：派 `practice-evaluator`（**时机一 · 出题**；值：`subject_path` + 节点 id + 内容文件的绝对路径 + 载体）
-   - **你搬入**：`cp -r /tmp/practice-evaluator-<节点id>/deliver/. <subject_path>/`——`deliver/` 里的相对路径与正式位置一一对应（题库落成 `lessons/<序号>-<节点id>.quiz.json`），**题面与答案一个字都不改**（`cp` 天然不改；**别读进来再写出来**）。它交回的 `empty_reason` 攒成 TSV（`锚点<TAB>理由`）后跑 `python3 <root>/scripts/apply_empty_reasons.py <subject_path> <节点id> <tsv>` 打进内容文件（**别手工开内容文件改**），除此之外内容文件一个字不动
+   - **你搬入**：`cp -r '<subject_path>/.stage/practice-evaluator-<节点id>/deliver/.' '<subject_path>/'`（搬完同一条命令里 `rm -rf` 掉 `.stage/`）——`deliver/` 里的相对路径与正式位置一一对应（题库落成 `lessons/<序号>-<节点id>.quiz.json`），**题面与答案一个字都不改**（`cp` 天然不改；**别读进来再写出来**）。它交回的 `empty_reason` 攒成 TSV（`锚点<TAB>理由`）后跑 `python3 <root>/scripts/apply_empty_reasons.py <subject_path> <节点id> <tsv>` 打进内容文件（**别手工开内容文件改**），除此之外内容文件一个字不动
    - **自查 lab 交付态**：写完自查**载体对应的测试命令**（`npm test`／`make test`／`./run_tests.sh`…）的交付态：**参考解全绿、任务/留白态非零退出**（学生还没开始做时那套必须是不通过的）
    - **你渲染**：`python3 <root>/scripts/render_lesson.py <subject_path> <节点id>` 出 `lessons/<序号>-<节点id>.html`。它逐行报问题（`<文件>:<行> <问题>`）：内容文件的错**按 `<文件>:<行>` 打回** `learning-coach`，题库与锚点对不上的打回 `practice-evaluator`，改完重渲
 3. **实验课 · 一次出材料**：派 `practice-evaluator`（**时机一 · 实验任务**；值：`subject_path` + 节点 id + **被验收节点 id** + 项目目标）→ **你搬入**：`cp` 说明页到 `lessons/<序号>-<节点id>.md`、任务树到 `lab/NNNN-…/`（原样搬，缺东西打回出题人补，你不代写、也不转抄）；然后**跟概念课同一条路**：你跑渲染器出页面、按第 4 步过检查，最后自查任务可跑
@@ -136,6 +138,8 @@ license: MIT
 
 ## 八、会话结束
 
+**尚在方向探索或其开课准备、未确认建课时**，按 `learning-discovery` 收尾，不套用下面的科目摘要与主页刷新规则；明确退出只简短收尾，此时也不适用「对话节奏」的下一步要求。
+
 1. 你写会话摘要（按 `record-keeping` 的 session-summary 规则），并在对话里给一条 `memory_updates` 建议；学生确认后写进 `MEMORY.md`
 2. 刷新根主页与科目主页，总结本次进度与下次建议
 
@@ -168,7 +172,7 @@ license: MIT
 
 | 派谁 | 只给这些值 |
 |---|---|
-| `resource-scout` | `subject_path` + 盘问结果摘要 |
+| `resource-scout` | `subject_path` + 盘问结果摘要 +（可选）本地资料路径 +（可选）可用的转换工具 |
 | `image-scout` | `RESOURCES.md` 的绝对路径 + 点名要抓的条目 +（可选）额外允许站点 |
 | `curriculum-designer` | `subject_path` + 盘问结果摘要 + `RESOURCES.md` 路径 |
 | `learning-coach` | `subject_path` + 节点 id |
@@ -177,13 +181,14 @@ license: MIT
 ### 交接与返回
 
 - **上游产出给路径，不转述**：锚点在内容文件、`objective` 在大纲、题目在 `.quiz.json`、资源在 `RESOURCES.md`——派工时给**绝对路径 + 节点 id**，让下游自己读；**别贴全文、也别凭记忆转述**（只有你自己生成的摘要——盘问结果、前置节点摘要——才写进 brief）
-- **搬运用 shell，不转抄**：产物由产出者落 `/tmp/<角色>-<节点id>/deliver/`，你只做三件事——`cp` 搬到位、跑校验器（`check_curriculum.py`／`check_pool.py`／`render_lesson.py`／`check_lesson.py`）、读角色给的**摘要**。**一份产物只该经过它的作者的手**
-- **长产出走暂存目录**：成套文件（lab、实验说明页）让角色按**最终相对路径**先落到 `/tmp/<角色>-<节点id>/deliver/`、正文只给文件清单，你 `cp`／`cp -r` 原样搬进正式位置——**别读进上下文再写出来**（一份题库 15 KB、一套 lab 20 KB、一份大纲 46 KB，读一遍写一遍就是几万字符的纯搬运），也别指望回复正文传文件内容（长正文会被压缩掉）；草稿路径一律在 prompt 里写死 `/tmp/<角色>-<节点id或slug>/`，**不许给 `/tmp/<科目名>` 这类共用固定路径**（后写的会盖掉先写的）
+- **搬运用 shell，不转抄**：产物由产出者落 `<subject_path>/.stage/<角色>-<节点id>/deliver/`，你只做三件事——`cp` 搬到位、跑校验器（`check_curriculum.py`／`check_pool.py`／`render_lesson.py`／`check_lesson.py`）、读角色给的**摘要**。**一份产物只该经过它的作者的手**
+- **长产出走暂存目录**：成套文件（lab、实验说明页）让角色按**最终相对路径**先落到 `<subject_path>/.stage/<角色>-<节点id>/deliver/`、正文只给文件清单，你 `cp`／`cp -r` 原样搬进正式位置（同一条命令里删掉 `.stage/`）——**别读进上下文再写出来**（一份题库 15 KB、一套 lab 20 KB、一份大纲 46 KB，读一遍写一遍就是几万字符的纯搬运），也别指望回复正文传文件内容（长正文会被压缩掉）；草稿路径一律在 prompt 里写死 `<subject_path>/.stage/<角色>-<节点id或slug>/`，**不许给 `.stage/` 根这类共用固定路径**（后写的会盖掉先写的）；**不用 `/tmp` 中转**——文件工具与 shell 看到的 `/tmp` 未必是同一个目录
 - **对位靠锚点，不靠序号**：`::: quiz` 的锚点文本是内容文件与题库之间的唯一接头——讲解写、出题人自己从内容文件的 `::: quiz` 行读（**你不转述**）、渲染器按它取题；序号对位在不一致时会**静默错位**
 - **「位 ↔ 题」交给检查，你别手工核**：锚点无题缺 `empty_reason:`、题库孤儿键、同一锚点两个题目位置——这三类对账都是 `render_lesson.py`／`check_lesson.py` 带行号的确定性报错，逐个手比是重复劳动；报错时按归属打回（内容 → `learning-coach`，题库与锚点 → `practice-evaluator`）
 - **同一科目同时只有一个写入者**：并行只允许"不写同一个文件"的两支（现有并行段就是：`image-scout` 写图片库与 `pool.md`、`curriculum-designer` 只回内容）；上一支没回来别派下一支
 - **交付带可复算的规模**：角色回来除了路径，**必须报**能复算的规模（节点数/边数、图片数/索引行数），你落盘后立刻跑 `check_curriculum.py`／`check_pool.py` 核对再写档案
 - **md5 基准现场算**：多轮迭代要比对文件有没有被改动时，派工与返回都用同一个格式 `md5sum <文件> | cut -c1-12`，基准值**现场算完原样贴**，不许凭记忆写
+- **等子代理不许轮询**（硬规则）：后台派出的子代理结束时宿主会自动通知你——派完就去做你**独立**的活（写元数据、写「学习中」状态、准备下一步），通知到了再接着干；**不许 `sleep` 轮询**去赌它写完没有
 - **验收不过就退回给产出它的那个角色自己改**（带失败的原文证据；别自己代改，也别另开一个新角色）。宿主没有子代理能力时，你按角色规格自己重做那一段
 
 ---
@@ -203,10 +208,11 @@ license: MIT
 | `preview_templates.py [--open]` | 用假数据把主页模板渲到 `<root>/.preview/`，只看样式与交互 |
 | `apply_empty_reasons.py <subject_path> <节点id> <tsv>` | 把无题锚点的理由打进内容文件 |
 | `renumber_lessons.py <subject_path> [--dry-run] [--render]` | 大纲插/删节点后重排课件序号并重渲 |
+| `build_examples.py [<工作区>]` | 一条命令重建 `examples/`（主页 + 有内容文件的课件；改引擎后用） |
 
 **退出码约定**：`check_lesson.py` / `check_curriculum.py` / `check_pool.py` 有阻断项即 1；`gen_home.py` 占位符缺失或产物断链即 1；`render_lesson.py` 有问题即 1、用法错误即 2。
 
-回归测试：`bash <root>/scripts/tests/run_tests.sh`（`--browser` 再加真实 Chrome 那两套；测试自己造临时科目，不碰工作区）。改了检查、`templates/assets/` 或本技能包文档之后跑一次。
+回归测试：`bash <root>/scripts/tests/run_tests.sh`（`--browser` 再加真实 Chrome 那三套；测试自己造临时科目，不碰工作区）。改了检查、`templates/assets/` 或本技能包文档之后跑一次。
 
 ---
 
