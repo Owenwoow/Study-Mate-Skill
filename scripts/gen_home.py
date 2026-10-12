@@ -7,7 +7,7 @@
 
 用法：
     python3 scripts/gen_home.py              # 工作区按三级定位（见 learn_workspace）
-    python3 scripts/gen_home.py <workspace>  # 显式指定工作区（验证时可指向 examples/ 的镜像副本）
+    python3 scripts/gen_home.py <workspace>  # 显式指定工作区（验证时可指向一份复制出来的工作区）
 
 工作区定位顺序：`LEARN_WORKSPACE` 环境变量 > `<root>/studymate.config.yaml` 的 `workspace` > `<root>/workspace`。
 
@@ -89,7 +89,7 @@ CARD_TEMPLATE = '''<article class="syo-card learn-subject-card" data-status="{st
     <div class="learn-progress">
       <div class="learn-progress__track"><div class="learn-progress__bar" style="width:{pct}"></div></div>
       <div class="learn-progress__meta">
-        <span>{done}/{total} 节点 · 掌握度 {mastery_pct}</span>
+        <span>{done}/{total} 节点 · 完成度 {mastery_pct}</span>
         <span class="learn-subject-card__go" aria-hidden="true">→</span>
       </div>
     </div>
@@ -383,7 +383,7 @@ def subject_dir(ws, slug):
 
 
 def progress_map(prog):
-    """progress.yaml 的 nodes → {节点id: {'status':…, 'mastery':…}}（字段缺省就不放进去）。"""
+    """progress.yaml 的 nodes → {节点id: {'status':…}}（缺省就不放进去；旧 mastery 键忽略）。"""
     raw = (prog or {}).get('nodes')
     out = {}
     if not isinstance(raw, dict):
@@ -393,9 +393,7 @@ def progress_map(prog):
             continue
         item = {}
         if state.get('status'):
-            item['status'] = str(state['status'])
-        if 'mastery' in state:
-            item['mastery'] = state['mastery']
+            item['status'] = statuses.normalize_status(state['status'])   # 旧六档读进来先归一成三档
         out[str(node_id)] = item
     return out
 
@@ -427,12 +425,12 @@ def curriculum_nodes(cur, prog, slug=None):
     for node in outline.nodes:
         node = dict(node)
         state = live.pop(node['id'], {})
-        status = str(state.get('status') or '' or '未开始')
+        status = statuses.normalize_status(state.get('status') or '未开始')
         if slug and status not in statuses.NODE_STATUS_CLASS:
             warn(f'{slug}: 节点 {node["id"]} 的状态 {status!r} 不在 schema 枚举里'
                  f'（按“未开始”的样式渲染，状态文本仍写原值）', key=('node-status', slug, status))
         node['status'] = status
-        node['mastery'] = clamp01(state['mastery'] if 'mastery' in state else 0)
+        node['mastery'] = statuses.TIER_FILL.get(status, 0.0)   # 完成度：由三档状态算
         nodes.append(node)
     if live and slug:
         warn(f'{slug}: progress.yaml 里有 curriculum.yaml 之外的节点，已忽略：{"、".join(sorted(live))}')
@@ -463,7 +461,7 @@ def progress_nodes(prog):
             'objective': '',
             'prerequisites': [],
             'status': state.get('status') or '未开始',
-            'mastery': clamp01(state.get('mastery', 0)),
+            'mastery': statuses.TIER_FILL.get(state.get('status') or '未开始', 0.0),
         })
     return nodes
 
@@ -479,7 +477,7 @@ def subject_nodes(cur, prog, slug=None):
 def node_stats(nodes):
     """(总节点数, 完成节点数, 掌握度平均, 当前节点标题)。
 
-    “完成”= 状态达“能独立应用”及以上；掌握度 = 各节点 mastery 平均（0–1）；
+    “完成”= 状态为“已学完”；完成度 = 各节点按三档折算（未开始 0 / 学习中 0.5 / 已学完 1）的平均；
     当前节点 = 状态为“学习中”的节点标题，没有就“还没开始”。没有节点时全部按零值。
     """
     if not nodes:

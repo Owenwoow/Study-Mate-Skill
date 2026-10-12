@@ -11,6 +11,7 @@
    - 讲解部分按可读性排版（46rem 行宽、1.8 行高、克制的层级）
    - 题目部分用约定类名：选择题 .quiz / .feedback / .correct / .wrong；
      开放题 .quiz__open / .quiz__answer / .quiz__criteria（点开对照参考答案与判分要点）
+     预测验证 .quiz__predict / .quiz__predict-input（先写预测才能点开）；交付物 .quiz__deliverable
      数据契约见 quiz.js 顶部注释；出题与判分规范见 <root>/references/protocols/layered-practice.md
    - 颜色一律走 Sayo 令牌（--syo-*），亮色是暖纸白+深绿、暗色是 Sayo 暗色
    ═══════════════════════════════════════════════════════════════ */
@@ -650,6 +651,43 @@
   font-size: .875rem;
   line-height: 1.75;
   color: var(--syo-fg-body);
+}
+
+/* ── 练习：预测验证（先写预测才能看结果）与交付物（要造出什么 + 怎么验收） ── */
+
+.quiz__predict-input {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0 0 var(--syo-space-2);
+  padding: 9px 13px;
+  font-family: inherit;
+  font-size: .875rem;
+  line-height: 1.6;
+  color: var(--syo-fg-body);
+  background: var(--syo-bg-base);
+  border: 1px solid var(--syo-border);
+  border-radius: var(--syo-radius-sm);
+  resize: vertical;
+}
+.quiz__predict-input:focus-visible { outline: 2px solid var(--syo-accent); outline-offset: 2px; }
+
+/* 还没写预测：按钮不可点（不上浮、不变色，光标说明原因） */
+.quiz button:disabled,
+.quiz button:disabled:hover {
+  opacity: .5;
+  cursor: not-allowed;
+  border-color: var(--syo-border);
+  color: var(--syo-fg-body);
+  transform: none;
+}
+
+.quiz__deliverable {
+  padding: var(--syo-space-3) var(--syo-space-4) var(--syo-space-4);
+  background: var(--syo-bg-base);
+  border: 1px solid var(--syo-border);
+  border-left: 3px solid var(--syo-accent);
+  border-radius: var(--syo-radius-sm);
 }
 
 /* ── 练习任务块（四层练习：L1 理解 / L2 改造 / L3 排错 / L4 应用） ── */

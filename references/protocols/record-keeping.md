@@ -1,6 +1,6 @@
 ---
 name: record-keeping
-description: 档案维护规范：学习状态的读写规则（共享记忆、进度、误解、评估记录、会话摘要、学习记录、主页刷新、新建科目、项目与实验课）。由 SKILL.md（总控）读取并自己执行。
+description: 档案维护规范：学习状态的读写规则（共享记忆、三档进度、误解记录、会话摘要、学习记录、主页刷新、新建科目、项目与实验课）。由 SKILL.md（总控）读取并自己执行。
 ---
 
 # 档案维护规范
@@ -15,24 +15,24 @@ description: 档案维护规范：学习状态的读写规则（共享记忆、�
     └── subjects/<slug>/         # 每门科目独立
         ├── subject.yaml  MISSION.md  RESOURCES.md  GLOSSARY.md   # 四份元数据（你维护）
         ├── curriculum.yaml       # 课程设计角色产出
-        ├── progress.yaml  misconceptions.yaml
+        ├── progress.yaml  misconceptions.yaml   # 三档进度 / 误解记录（唯一落点）
         ├── index.html            # 科目主页（生成产物）
         ├── lessons/ reference/ assets/    # 课件三件（见下）、速查页与本地资料、科目组件
         ├── lab/                  # 角色落 deliver/、你 cp 搬入：实操 + solutions/ + README.md；概念课没有
         ├── .stage/               # 角色产出的暂存区（角色写、你 cp 搬入后删；不留到交付）
         ├── sources/              # 在线来源原文（resource-scout 落），与 lab/ 一样按需建，不预建
-        ├── assessments/          # 评估记录（你撰写）
+        ├── assessments/          # 旧评估记录（已退役：只读，不再新建）
         ├── learning-records/     # 学习记录
         └── sessions/YYYY-MM-DD.md
 ```
 
 ## 共享记忆 MEMORY.md
 
-按模板分节（我是谁 / 教学偏好 / 学习习惯 / 跨科目观察）增补与修正。只记跨科目、跨会话仍成立的东西；知识点细节留给该科目的 misconceptions。
+按模板分节（我是谁 / 教学偏好 / 学习习惯 / 跨科目观察）增补与修正。只记跨科目、跨会话仍成立的东西；知识点细节留给该科目的误解记录。
 
 ## 科目文件夹
 
-1. **新建**：建 `subjects/<slug>/` 与 `lessons/`、`reference/`、`assets/`、`learning-records/`、`sessions/`、`assessments/`；按 `templates/subject.yaml` 建 `subject.yaml`（`created_at` 填当天）；`assets/` 只从 `<root>/templates/assets/` 拷 `style.css`、`quiz.js`、`lesson-toc.js`（共享层由 `gen_home.py` 负责）。**`lab/` 不预建**——只有 `kind: 实操/实验` 的节点才需要。盘问时定下的**载体**先随派工 prompt 传给 `practice-evaluator`，等**首个实操/实验节点**建 `lab/` 时再落盘进 `lab/README.md`（那之前没有 `lab/` 不是漏了）
+1. **新建**：建 `subjects/<slug>/` 与 `lessons/`、`reference/`、`assets/`、`learning-records/`、`sessions/`；按 `templates/subject.yaml` 建 `subject.yaml`（`created_at` 填当天）；`assets/` 只从 `<root>/templates/assets/` 拷 `style.css`、`quiz.js`、`lesson-toc.js`（共享层由 `gen_home.py` 负责）。**`lab/` 不预建**——只有 `kind: 实操/实验` 的节点才需要。盘问时定下的**载体**先随派工 prompt 传给 `practice-evaluator`，等**首个实操/实验节点**建 `lab/` 时再落盘进 `lab/README.md`（那之前没有 `lab/` 不是漏了）
 2. **列出**：读 `subjects/*/subject.yaml`，汇总"科目名 + 状态 + 上次学习日期 + 当前节点"
 3. **切换**：切换即换路径，不复制不搬运
 4. **共享组件更新后同步到已有科目**：`<root>/templates/assets/` 里的 `style.css`、`quiz.js`、`lesson-toc.js` 一改，各科目 `assets/` 里的同名副本就旧了（新科目是建课时拷的），要一起覆盖——科目自己新增的组件不动
@@ -56,20 +56,24 @@ description: 档案维护规范：学习状态的读写规则（共享记忆、�
 
 记成 `NNNN-dash-case.md`（编号递增），作为下次教什么的依据。**写一条当且仅当出现可观察的证据**：学生正确用出了概念、主动说明已知某知识、误解被纠正。覆盖了但没证据的不记，纯进度日志不记。被更新的理解标 `Status: superseded by LR-NNNN`，不删除。
 
-## 评估记录（assessments/）
+## 误解记录（misconceptions.yaml）
 
-`practice-evaluator` 把评估记录落成 `deliver/assessments/NNNN-<节点id>.md`，**你 `cp` 搬入**（正文含题面与作答原文）：
+**只有一个落点**：`misconceptions.yaml`。字段定型在 `<root>/schemas/misconceptions.schema.json`（`topic` / `source` / `evidence` / `status` / `at`）——**读进来先按它归一**：旧文件里的 `question`／`misunderstanding`／`answer_summary` 是同一份证据的旧写法，照旧读得进，写回时收敛到新字段。
 
-1. 命名 `NNNN-<节点id>.md`（编号递增），存 `subjects/<slug>/assessments/`
-2. `.md` 文件，**YAML frontmatter 承载 `assessment.schema.json` 的字段**（日期加引号），正文写题面与作答原文
-3. 逐题结论的依据写进该题的 `note`（对的是哪条判分要点、缺哪一条）；不再要求与大纲逐字对齐
-4. 同时双落点记误解（`misconceptions.yaml` + `progress.yaml.misconceptions`）
+- **谁写**：你写——`source` 取 `局部提问`（`local-qa`）／`讲解反馈`／`实验课验收`；`status` 取 `未处理`／`已补练`／`已消解`；`at` 写 `"YYYY-MM-DD"`
+- `evidence` 是这条记录唯一有用的部分：提问原文、作答引用或验收结论——**没有证据的记录下次开场读不出任何可用的东西**
+- `status` 由**处置到哪一步**决定，不靠感觉：补练过还没重验是「已补练」，学生在新情境里自己走通了才是「已消解」
+- `progress.yaml` 里**不再存一份** misconceptions——双落点只会带来不同步；旧文件里那份照旧读得进，写回时别再往里加
+
+## 评估记录（已退役）
+
+阶段评估已删，`assessments/` **不再产生新文件**：实验课验收的结论写进学习记录（"实验通过：<标题>"，或没通过时的具体缺口）。盘上已有的旧评估记录保留可读，`assessment.schema.json` 留着只为读它们。
 
 ## 项目与实验课
 
 `progress.yaml` 的 `project` **只有一句"在做的是什么"**（`current`；schema 只要求这一个键）。**里程碑不在这里**——它们就是 `kind: 实验` 的验收课节点，进度就在 `nodes` 里（课型见 `layered-practice` 第四节）。
 
-- **实验课通过时（硬规则）**：把该节点与它的 `prerequisites`（被验收节点）都置为「**已通过项目验证**」（mastery 保留或上调），再写一条学习记录（"实验通过：<标题>"）。这是"项目推进"的唯一依据，不要凭印象提前置、也不要漏置
+- **实验课通过时（硬规则）**：把该节点与它的 `prerequisites`（被验收节点）都置为「**已学完**」，再写一条学习记录（"实验通过：<标题>"）。这是"项目推进"的唯一依据，不要凭印象提前置、也不要漏置
 - `current` 变了先跟学生确认；改完过 `schemas/progress.schema.json`
 
 ## 主页刷新
@@ -79,11 +83,12 @@ description: 档案维护规范：学习状态的读写规则（共享记忆、�
 ## 读写规则（硬约束）
 
 1. 写前先读现有内容，**增量修改**（不整文件覆盖，`MEMORY.md`/`subject.yaml` 的新建除外）
-2. 写后校验：`curriculum.yaml`、`progress.yaml`、`subject.yaml`、评估记录 frontmatter 分别对照 `<root>/schemas/*.json`；会话摘要对照 `session-summary.schema.json`
+2. 写后校验：`curriculum.yaml`、`progress.yaml`、`subject.yaml`、`misconceptions.yaml` 分别对照 `<root>/schemas/*.json`；会话摘要对照 `session-summary.schema.json`
 3. **写入类型化的状态**：结构化事实进 YAML，偏好与观察进 `MEMORY.md`
 4. **会话摘要**（会话结束时）：按 session-summary schema 生成，存 `subjects/<slug>/sessions/<YYYY-MM-DD>.md`（同日多段追加）；**YAML frontmatter 承载 schema 字段**（日期加引号），正文写本次要点；同时在对话里给一条 `memory_updates` 建议，学生确认后写进 `MEMORY.md`
-5. **恢复视图**（开场自读）：`MEMORY.md` 相关分节 + 当前节点 + 前置节点摘要 + 最近 5 条 misconceptions + 最近 3 条学习记录 + 最近 3 条评估记录 + 实验课节点进度与 `project.current`。只读需要的部分（offset/limit/grep），不把长文件整份读进来
-6. **进度只认 `progress.yaml`**：`curriculum.yaml` 的每个节点也带 `status`/`mastery`（schema 要求），那是**建课时的初始快照**，建课后不再回头维护；运行期的状态只写 `progress.yaml`、也只读它——里面**只记有变化的节点**，没写的按大纲里的初始值算（`gen_home.py` 就是这么合并的）。两份文件都改是漂移的源头
+5. **恢复视图**（开场自读）：`MEMORY.md` 相关分节 + 当前节点 + 前置节点摘要 + 最近的误解记录 + 最近 3 条学习记录 + 最近一份会话摘要 + 实验课节点进度与 `project.current`。只读需要的部分（offset/limit/grep），不把长文件整份读进来
+6. **进度是三档**：`未开始` / `学习中` / `已学完`（`progress.schema.json`），掌握度字段已取消。旧文件里的六档照旧读得进——`初步理解` 按 `学习中`，`能独立应用`／`需要复习`／`已通过项目验证` 按 `已学完`（`gen_home.py` 读侧就是这么映射的），**写回时一律用三档**
+7. **进度只认 `progress.yaml`**：`curriculum.yaml` 的每个节点也带 `status`（schema 要求），那是**建课时的初始快照**，建课后不再回头维护；运行期的状态只写 `progress.yaml`、也只读它——里面**只记有变化的节点**，没写的按大纲里的初始值算（`gen_home.py` 就是这么合并的）。两份文件都改是漂移的源头
 
 ## 边界
 

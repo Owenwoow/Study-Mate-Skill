@@ -151,6 +151,31 @@ def test_from_data():
           cur.index_of('a') == 1 and [p.code for p in problems] == ['duplicate_id'])
 
 
+def test_check_curriculum_legacy_fields():
+    """旧大纲（带已取消的 mastery、用旧六档状态）：check_curriculum 只提示不阻断。"""
+    import subprocess
+    import yaml
+    data = {
+        'subject': 'demo', 'version': 1,
+        'nodes': [
+            {'id': 'a', 'title': '甲', 'kind': '概念', 'objective': '能说清甲', 'prerequisites': [],
+             'resources': [], 'status': '能独立应用', 'mastery': 0.8},
+            {'id': 'b', 'title': '乙', 'kind': '实操', 'objective': '能做出乙', 'prerequisites': ['a'],
+             'resources': [], 'status': '未开始', 'mastery': 0},
+        ],
+        'edges': [{'from': 'a', 'to': 'b', 'reason': '乙要用到甲'}],
+    }
+    with tempfile.TemporaryDirectory(prefix='studymate-legacy-') as directory:
+        path = Path(directory) / 'curriculum.yaml'
+        path.write_text(yaml.safe_dump(data, allow_unicode=True), encoding='utf-8')
+        result = subprocess.run([sys.executable, str(REPO / 'scripts' / 'check_curriculum.py'), str(path)],
+                                capture_output=True, text=True, encoding='utf-8')
+    out = result.stdout + result.stderr
+    check('旧大纲：mastery 与旧六档不阻断（退出码 0）', result.returncode == 0, out[-400:])
+    check('旧大纲：提示 mastery 已取消', 'mastery' in out and '[WARN]' in out, out[-400:])
+    check('旧大纲：提示旧六档按三档读', '能独立应用→已学完' in out, out[-400:])
+
+
 def main():
     for name, func in sorted(globals().items()):
         if name.startswith('test_') and callable(func):

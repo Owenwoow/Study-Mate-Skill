@@ -268,5 +268,46 @@ try { run([b10], {}); } catch (e) { noMathApiError = e.message; }
 check('没有 LessonMath 时不抛错，公式原文仍可读',
   !noMathApiError && findAll(b10, 'math-inline').some(s => s.textContent === 'x^2'), noMathApiError);
 
+// ── 新题型：预测验证 / 交付物（kind 可写可省；写错 kind 或混写字段走兜底） ──────────
+const b11 = makeBlock([
+  { kind: '预测验证', q: '把 i 初值改成 1，循环会跑几次？', '预测': '5 次', '比对': '实测 5 次：i 从 1 到 5' },
+  { q: '写一个 ipcalc.py', '交付物': '能跑的 ipcalc.py', '证据': 'python -m pytest test_ipcalc.py' },
+  { kind: '客观题', q: '写了 kind 却给开放题字段', answer: 'a', criteria: 'c' },
+  { q: '混写两组字段', '预测': 'x', '比对': 'y', answer: 'a', criteria: 'c' },
+  { kind: '预测验证', q: '只给预测没给比对', '预测': 'x' },
+  { q: '普通选择题', opts: ['A', 'B'], ans: 0, why: 'w' },
+]);
+run([b11]);
+const predict = findAll(b11, 'quiz__predict')[0];
+const predictInput = predict && findAll(predict, 'quiz__predict-input')[0];
+const predictBtn = predict && findAll(predict, 'quiz__reveal')[0];
+const predictAns = predict && findAll(predict, 'quiz__answer')[0];
+check('预测验证：有输入框、按钮、收起的结果区', !!predictInput && !!predictBtn && predictAns && predictAns.hidden === true);
+check('预测验证：没写预测时按钮不可点', predictBtn.disabled === true);
+predictBtn.click();
+check('预测验证：没写预测硬点也不展开', predictAns.hidden === true);
+predictInput.value = '   ';
+(predictInput._handlers.input || []).forEach(fn => fn());
+check('预测验证：只写空白仍不可点', predictBtn.disabled === true);
+predictInput.value = '我猜 4 次';
+(predictInput._handlers.input || []).forEach(fn => fn());
+check('预测验证：写了预测按钮变可点', predictBtn.disabled === false);
+predictBtn.click();
+check('预测验证：点开显示参考预测与比对',
+  predictAns.hidden === false && predictAns.textContent.includes('参考预测') && predictAns.textContent.includes('5 次') &&
+  predictAns.textContent.includes('跑完的比对') && predictAns.textContent.includes('i 从 1 到 5'));
+predictBtn.click();
+check('预测验证：再点收起', predictAns.hidden === true && predictBtn.textContent === '写好了，看实际结果');
+
+const deliver = findAll(b11, 'quiz__deliverable')[0];
+check('交付物：不写 kind 也按字段认出，直接展示要造出与证据',
+  !!deliver && deliver.textContent.includes('要造出') && deliver.textContent.includes('能跑的 ipcalc.py') &&
+  deliver.textContent.includes('python -m pytest test_ipcalc.py'));
+const broken11 = findAll(b11, 'feedback').filter(f => (f.textContent || '').includes('数据不完整'));
+check('kind 与字段不符 / 字段混写 / 缺字段 → 三道都走兜底', broken11.length === 3, `实际 ${broken11.length}`);
+check('兜底提示列出新题型要的字段', broken11.length > 0 && broken11[0].textContent.includes('预测/比对') &&
+  broken11[0].textContent.includes('交付物/证据'));
+check('新题型不计分：只有 1 道选择题时不显示计分', findAll(b11, 'quiz__score').length === 0);
+
 console.log(failures === 0 ? '\n全部通过' : `\n${failures} 项失败`);
 process.exit(failures === 0 ? 0 : 1);

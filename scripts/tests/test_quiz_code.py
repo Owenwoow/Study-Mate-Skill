@@ -3,7 +3,7 @@
 
 `quiz.js` 把 ``` 围栏渲染成真代码块（<pre><code> + 缩进 + 自动上色），见它顶部契约。
 检查只管一件结构事：**围栏成对**——不成对的话后半段会被整段渲染成代码块，学生看到的
-题面就变了。渲染本身由 `quiz_dom_test.js`（结构）与 `browser/quiz_code_test.mjs`
+题面就变了。渲染本身由 `quiz_dom_test.cjs`（结构）与 `browser/quiz_code_test.mjs`
 （真实 Chrome 里的上色与缩进）钉。
 
 用法：python3 scripts/tests/test_quiz_code.py
@@ -55,6 +55,30 @@ CASES += [
     for option in (None, 1, [], {'toString': None}, '', '   ')
 ]
 
+
+
+def items_block(*items):
+    return '<div class="quiz" data-quiz=\'' + json.dumps(list(items), ensure_ascii=False) + '\'></div>'
+
+
+# 四种题型的判定：与 quiz.js 的 FIELD_GROUPS 同一套（检查放行的题，页面一定认得）
+CASES += [
+    ('预测验证：写 kind（放行）', items_block({'kind': '预测验证', 'q': '跑几次？', '预测': '5 次', '比对': '实测 5 次'}),
+     False, None, None, None),
+    ('预测验证：不写 kind 按字段推断（放行）', items_block({'q': '跑几次？', '预测': '5 次', '比对': '实测 5 次'}),
+     False, None, None, None),
+    ('交付物：不写 kind 按字段推断（放行）', items_block({'q': '做一个', '交付物': 'ipcalc.py', '证据': 'pytest'}),
+     False, None, None, None),
+    ('预测验证缺比对（拦）', items_block({'kind': '预测验证', 'q': '跑几次？', '预测': '5 次'}),
+     True, '预测验证缺 比对', None, None),
+    ('两种题型字段混写（拦）', items_block({'q': '混写', '预测': 'x', '比对': 'y', 'answer': 'a', 'criteria': 'c'}),
+     True, '题型冲突', None, None),
+    ('写了 kind 却给别的题型的字段（拦）', items_block({'kind': '客观题', 'q': '错配', 'answer': 'a', 'criteria': 'c'}),
+     True, '字段却是开放题的', None, None),
+    ('未知题型（拦）', items_block({'kind': '选择题', 'q': '旧词', 'opts': ['A', 'B'], 'ans': 0, 'why': 'w'}),
+     True, '不在词表里', None, None),
+    ('什么字段都没有（拦）', items_block({'q': '只有题面'}), True, '题型不明', None, None),
+]
 
 def main():
     tmp = tempfile.mkdtemp(prefix='smtest-code-')

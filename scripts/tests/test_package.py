@@ -5,7 +5,7 @@
 原版钉的是 11 个 `SKILL.md` 里的 417 条措辞；通用版只有 1 个入口 + 11 份参考规格，
 所以这里钉三类东西——
 
-  ① 包结构：入口、5 个角色、6 个协议、4 份约束文档、6 份 schema、16 个脚本、模板齐全；
+  ① 包结构：入口、5 个角色、6 个协议、4 份约束文档、8 份 schema、15 个脚本、模板齐全；
   ② 规则在位：SKILL.md 里承载可执行规则的片段（阈值、字段名、文件名、命令、时机、禁止项）
      逐条必须在（压缩/改写时不许丢规则）；
   ③ 一致性与洁净：SKILL.md 提到的每个 `references/*.md` 与 `scripts/*.py` 都真实存在；
@@ -25,10 +25,11 @@ PROTOCOLS = ('learning-discovery', 'lesson-design', 'layered-practice', 'evidenc
              'record-keeping')
 DOCS = ('课件内容格式.md', '工程约束.md', '使用说明.md', '设计方案.md', '安装与迁移.md', 'Agent交接协议.md')
 SCHEMAS = ('curriculum.schema.json', 'progress.schema.json', 'assessment.schema.json',
-           'session-summary.schema.json', 'subject.schema.json', 'agent-handoff.schema.json')
+           'session-summary.schema.json', 'subject.schema.json', 'agent-handoff.schema.json',
+           'misconceptions.schema.json', 'question.schema.json')
 SCRIPTS = ('gen_home.py', 'render_lesson.py', 'check_lesson.py', 'check_curriculum.py',
            'check_pool.py', 'check_skill.py', 'preview_templates.py',
-           'apply_empty_reasons.py', 'renumber_lessons.py', 'build_examples.py',
+           'apply_empty_reasons.py', 'renumber_lessons.py',
            'curriculum.py', 'lessonfile.py', 'lessonfmt.py', 'pagetpl.py', 'statuses.py', 'check_handoff.py')
 TEMPLATES = ('lesson.html', 'home-index.html', 'subject-index.html',
              'MEMORY.md', 'MISSION.md', 'RESOURCES.md', 'GLOSSARY.md', 'subject.yaml')
@@ -40,7 +41,7 @@ SKILL_RULES = [
     ('工作区配置文件', 'studymate.config.yaml'),
     ('按恢复视图读状态', '恢复视图'),
     ('首次使用问三件事', '想学什么'),
-    ('新科目落地含 assessments/', 'assessments/'),
+    ('新科目落地：lab/ 与 sources/ 不预建', '`lab/` 与 `sources/` 不预建'),
     ('MISSION 两节来自盘问第一问', 'Success looks like'),
     ('先派 resource-scout 收集资料', '`resource-scout` 收集资料'),
     ('资源清单：角色落 deliver/、总控 cp 落位', '<subject_path>/.stage/resource-scout-<slug>/deliver/RESOURCES.md'),
@@ -79,14 +80,14 @@ SKILL_RULES = [
     ('过检查命令', 'check_lesson.py'),
     ('FAIL 按归属打回', '`FAIL` 按归属打回'),
     ('通过后给出可点页面 + 绝对路径', '绝对路径'),
-    ('评估点 ①实验课', 'kind: 实验` 的课'),
-    ('评估点 ②每 3-5 个普通节点', '3-5 个普通节点'),
-    ('评估点 ③学生要求', '考考我'),
-    ('非评估点给保守进度', '初步理解'),
-    ('通过则置能独立应用', '能独立应用'),
+    ('验收只在实验课', '只在 `kind: 实验` 的课派'),
+    ('阶段评估已删', '阶段评估已删'),
+    ('考考我补一份练习', '考考我'),
+    ('非验收点给保守进度（最多到学习中）', '状态最多到「学习中」'),
+    ('通过则置已学完、结论写学习记录', '该节点置为「已学完」'),
     ('实验课置位规则', '`record-keeping` 置位'),
-    ('部分通过记误解双落点', '双落点'),
-    ('两次无效降级 L1', '降级 L1'),
+    ('部分通过记误解（只记一处）', '只记 `misconceptions.yaml` 一处'),
+    ('两次无效降一档', '降一档'),
     ('局部提问你亲自答', 'local-qa'),
     # 元数据与使命
     ('四份元数据表', 'GLOSSARY.md'),

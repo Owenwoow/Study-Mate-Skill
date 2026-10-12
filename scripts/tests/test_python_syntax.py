@@ -10,7 +10,7 @@ r"""全部 .py 都要能编译过：非法转义序列在 Python 3.12+ 是 Synta
 警告，所以一直全绿，直到 CI 的 3.13 才红。
 
 判据只一条：**把每个 .py 解析一遍**，有 `SyntaxError`（含被升级的 `SyntaxWarning`）就报，
-带文件名与行号。覆盖 `scripts/`（引擎）与 `examples/`（示例里的 lab 代码）；`workspace/` 是学生
+带文件名与行号。覆盖 `scripts/`（引擎）；`workspace/` 是学生
 数据、`.venv` 与 `node_modules` 是第三方，都不扫。
 
 用法：python3 scripts/tests/test_python_syntax.py
@@ -21,7 +21,7 @@ import sys
 import warnings
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
-ROOTS = ('scripts', 'examples')
+ROOTS = ('scripts',)
 SKIP_DIRS = {'__pycache__', '.venv', 'node_modules', 'workspace', '.git', '.superpowers'}
 
 failures = 0

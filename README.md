@@ -1,6 +1,6 @@
 # StudyMate · 通用 Agent Skill
 
-把「自学一门科目」这件事交给 Agent：**定计划、讲知识、做项目、验掌握度**。
+把「自学一门科目」这件事交给 Agent：**定计划、讲知识、做项目、验收成果**。
 
 这是从 [Study-Mate](https://github.com/Miaotofu01/Study-Mate)（DSH 学习模式预设）整理出来的**通用技能包**——不再绑定任何特定 Agent 框架，任何支持 Agent Skills 约定的宿主都能用。
 
@@ -9,7 +9,7 @@
   → 先盘问目的 / 程度 / 前置基础 / 配套项目 / 实操载体
   → 产出知识点路线图（DAG）+ 科目主页
   → 逐节点产出 HTML 课件（讲解 + 检索练习）+ 引导式实操（lab）
-  → 用可运行证据评估掌握度，进度落在文件里、下次会话直接继承
+  → 用可运行证据验收，进度落在文件里、下次会话直接继承
 ```
 
 ## 它和「直接跟 AI 聊天学」的区别
@@ -49,7 +49,6 @@ cp -r Study-Mate-Skill ~/.workbuddy-ai/skills/
 ├── README.md
 ├── references/            # 角色与协议规格 + 约束文档
 ├── schemas/  templates/  scripts/
-├── examples/              # 两门示例科目（可拿来试跑）
 └── workspace/             # 你的学习数据（默认位置）
 ```
 
@@ -86,8 +85,9 @@ python3 scripts/preview_templates.py --open   # 用假数据渲染到 .preview/�
 | 路径 | 是什么 |
 |---|---|
 | `SKILL.md` | **唯一入口**：学习系统总控——开场、盘问、学习循环、角色派发、脚本清单、边界 |
-| `references/roles/*.md` | 5 个角色规格：`resource-scout`（找资料）、`image-scout`（采图）、`curriculum-designer`（拟大纲）、`learning-coach`（写课件内容）、`practice-evaluator`（出题与评估） |
-| `references/protocols/*.md` | 5 份协议：`lesson-design`（课件内核）、`layered-practice`（题目规范）、`evidence-check`（证据核验）、`local-qa`（局部答疑）、`record-keeping`（状态读写） |
+| `references/roles/*.md` | 5 个角色规格：`resource-scout`（找资料）、`image-scout`（采图）、`curriculum-designer`（拟大纲）、`learning-coach`（写课件内容）、`practice-evaluator`（出题与实验课验收） |
+| `references/protocols/*.md` | 6 份协议：`learning-discovery`（可选方向探索）、`lesson-design`（课件内核）、`layered-practice`（题目规范）、`evidence-check`（实验课验收）、`local-qa`（局部答疑）、`record-keeping`（状态读写） |
+| `references/Agent交接协议.md` | 角色暂存交接（`handoff.json`）的唯一口径 |
 | `references/课件内容格式.md` | 内容文件与题目位置的语法——**渲染器的唯一输入规格** |
 | `references/工程约束.md` | 目录约定、占位符契约、前端技术选型 |
 | `references/使用说明.md` | 面向学生的日常用法 |
@@ -124,10 +124,10 @@ python3 scripts/renumber_lessons.py <科目目录> [--dry-run] [--render]
 # ① 文档 frontmatter
 python3 scripts/check_skill.py
 
-# ② 用示例科目跑一遍引擎（复制一份，别改原示例）
-cp -r examples /tmp/sm-check && python3 scripts/gen_home.py /tmp/sm-check
+# ② 拿一份真实工作区跑一遍引擎（复制一份，别改原数据）
+cp -r <你的学习工作区> /tmp/sm-check && python3 scripts/gen_home.py /tmp/sm-check
 python3 scripts/check_curriculum.py /tmp/sm-check/.learning/subjects/*/curriculum.yaml
-python3 scripts/check_pool.py /tmp/sm-check/.learning/subjects/typescript-web-api
+python3 scripts/check_pool.py /tmp/sm-check/.learning/subjects/<slug>
 
 # ③ 回归测试（自己造临时科目，不碰工作区）
 bash scripts/tests/run_tests.sh

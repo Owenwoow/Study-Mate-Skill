@@ -1,6 +1,6 @@
 ---
 name: study-mate-skill
-description: StudyMate 自学系统总控（通用版）：把一门科目拆成知识点路线图，逐节点产出 HTML 课件 + 引导式实操，用可运行证据评估掌握度，状态全部落在文件里、跨会话继承。支持多科目与跨科目共享记忆。当用户说「我想学 X」「继续学 X」「考考我」「这段没看懂」或需要为某科目建大纲、出课件、出题评估时使用。
+description: StudyMate 自学系统总控（通用版）：把一门科目拆成知识点路线图，逐节点产出 HTML 课件 + 引导式实操，用可运行证据验收，状态全部落在文件里、跨会话继承。支持多科目与跨科目共享记忆。当用户说「我想学 X」「继续学 X」「考考我」「这段没看懂」或需要为某科目建大纲、出课件、出题评估时使用。
 argument-hint: "你想学什么？或继续上次的科目"
 license: MIT
 ---
@@ -16,7 +16,7 @@ license: MIT
 | `<root>/references/roles/<角色>.md` | 5 个角色的规格（做法、输入、交付格式、边界） | 派活前读；派工时把**绝对路径**给角色，让它自己读 |
 | `<root>/references/protocols/lesson-design.md` | 课件内核的唯一约束来源 | 写/改课件前 |
 | `<root>/references/protocols/layered-practice.md` | 题目唯一规范（四层、四型、题量、lab 规范） | 出题、评估、做 lab 前 |
-| `<root>/references/protocols/evidence-check.md` | 完成证据核验口径 | 评估时 |
+| `<root>/references/protocols/evidence-check.md` | 实验课验收口径（证据资格、全部核心点） | 实验课验收时 |
 | `<root>/references/protocols/local-qa.md` | 局部提问怎么答 | 学生贴回看不懂的片段时 |
 | `<root>/references/protocols/record-keeping.md` | 学习状态读写规则（**所有落盘口径**） | 开场恢复状态、每次写状态前 |
 | `<root>/references/课件内容格式.md` | 内容文件与题目位置的语法——**渲染器的唯一输入规格** | 写内容文件前 |
@@ -38,12 +38,12 @@ license: MIT
      2. `<root>/studymate.config.yaml` 里的 `workspace:`；
      3. `<root>/workspace`（默认，不存在就让生成器建）。
    - **读写一律基于这两个绝对路径，不在会话 cwd 里建或找学习文件**。会话可以在任意目录启动。
-1. **加载 `record-keeping` 并读状态**：按它的「恢复视图」切片读取（共享记忆相关分节 + 当前节点 + 前置节点摘要 + 最近 5 条误解 + 最近 3 条学习记录 + 最近 3 条评估记录 + 实验课进度）。只读需要的部分，别把长文件整份读进来。
+1. **加载 `record-keeping` 并读状态**：按它的「恢复视图」切片读取（共享记忆相关分节 + 当前节点 + 前置节点摘要 + 最近的误解记录 + 最近 3 条学习记录 + 最近的会话摘要 + 实验课进度）。只读需要的部分，别把长文件整份读进来。
    - **可选方向入口**（首次写记忆之前）：已有明确科目直接走原流程，恢复已有科目不拦截；只有学生说"不知道学什么""帮我选方向"或主动选择探索时，读 `<root>/references/protocols/learning-discovery.md` 并由你亲自执行，学生确认建课前不写任何学习文件
 2. **没有科目**（首次使用）：问三件事——想学什么、当前基础、讲法偏好（一次一件）；写进 `MEMORY.md`，然后走下面的新科目盘问。
 3. **已有科目**：把科目清单摆给学生选项（科目名 + 状态 + 上次学习日期 + 当前节点），或让他报新科目名。
 4. **新科目** → 你亲自走「新科目盘问」，盘完按这个顺序落地：
-   1. 建科目文件夹（含 `assessments/`；`lab/` 不预建，见 `record-keeping`）
+   1. 建科目文件夹（`lab/` 与 `sources/` 不预建，见 `record-keeping`）
    2. 写 `MISSION.md`（`## Why` 与 `## Success looks like` 来自盘问第一问；`## Constraints` 收前置基础、时间投入与偏好；`## Out of scope` 收明确不学的范围）与 `subject.yaml` 的 `goal`
    3. 派 `resource-scout` 收集资料（值：`subject_path` + 盘问结果摘要 +（可选）本地资料路径 +（可选）可用的转换工具）：**派发前主动问学生有没有准备好的本地教材或讲义路径**（留空则全网检索）；有本地资料就先看清格式，要转换工具（PDF／Word／PPT 转 Markdown）就先问过学生、装好再派。它把清单草稿落到 `<subject_path>/.stage/resource-scout-<slug>/deliver/RESOURCES.md`——你 `cp` 到科目（同一条命令里删掉 `.stage/`）、扫一眼条数与来源域名；本地教材它直接转进 `reference/`，在线来源原文转进 `sources/`。**建池与拟大纲并行**——`RESOURCES.md` 落位后，同时派下面两个（别串着等）：
       ```
@@ -103,17 +103,17 @@ license: MIT
 4. **过检查**（渲染写过盘之后跑）：`python3 <root>/scripts/check_lesson.py <页面路径> --subject <subject_path> --node <节点id>`（按 `kind` 判 lab 要求）；`FAIL` 按归属打回（题目、lab 与实验说明页内容 → `practice-evaluator`；概念课/实操课的内容文件、版式、引用、lab 链接 → `learning-coach`），`WARN` 自己心里有数。通过后**两步缺一不可**：
    - **回复里给出可点的页面**：用宿主的结果呈现能力（预览面板／打开文件／附件卡片）呈上页面，并写明**绝对路径**（宿主没有呈现能力时，绝对路径就是唯一拿得到页面的路）；实操课与实验课顺带给 `lab/NNNN-…` 路径
    - 再按「对话节奏」给下一步
-5. 学生说"学完了" → **只在评估点派** `practice-evaluator`（**时机二 · 评估**；值：`subject_path` + 节点 id + **作答原文（逐字转发，不许摘要——摘要会污染证据核验）**）。**评估点是**：① `kind: 实验` 的课（它本来就是验收）；② 每走完 3-5 个普通节点的一次阶段评估；③ 学生自己要求"考考我"。**不是评估点就别派**——你按"读完了 + 页内自测做了 + 实操断言全绿"给一个保守的进度更新（状态最多到「初步理解」，掌握度按实操实测估），直接进下一节点
+5. 学生说"学完了" → **只在 `kind: 实验` 的课派** `practice-evaluator`（**时机二 · 验收**；值：`subject_path` + 节点 id + **作答原文（逐字转发，不许摘要——摘要会污染证据核验）**）。**阶段评估已删**：普通节点没有"每几个节点考一次"的节拍；学生自己说"考考我"，就按**时机一 · 出题**补一份练习（那也是题，仍归它）。不是验收点就别派——你按"读完了 + 页内自测做了 + 实操断言全绿"给一个保守的进度更新（**状态最多到「学习中」**），直接进下一节点
 6. 按结论分支：
-   - 通过 → 你更新 `progress.yaml`（掌握度、状态"能独立应用"、misconceptions）+ 写评估记录 + 写一条学习记录；**实验课通过时按 `record-keeping` 置位**（它自己与 `prerequisites` 里的被验收节点）；阶段评估通过时，**把这一阶段的节点一起提到「能独立应用」**
-   - 部分通过 / 不通过 → 反馈具体缺口，记误解（双落点），安排复习或补练
-7. 卡住/没听懂 → 派 `learning-coach` 改课件（告诉它"哪种讲法无效"），回到第 4 步；连续两次无效降级 L1 练习。**问题在题目或实验任务本身** → 派 `practice-evaluator` 改
+   - 通过 → 你更新 `progress.yaml`（该节点置为「已学完」）+ 写一条学习记录（验收结论就写在这里，**不再有评估记录**）；**实验课通过时按 `record-keeping` 置位**（它自己与 `prerequisites` 里的被验收节点）
+   - 部分通过 / 不通过 → 反馈具体缺口，记一条误解（**只记 `misconceptions.yaml` 一处**），安排复习或补练
+7. 卡住/没听懂 → 派 `learning-coach` 改课件（告诉它"哪种讲法无效"），回到第 4 步；连续两次无效就把练习**降一档**（回到只考理解的那一层）。**问题在题目或实验任务本身** → 派 `practice-evaluator` 改
 8. 实验课通过后，按需派 `curriculum-designer` 调整后续路线（它会检查实验课的 `prerequisites` 与各节点 `kind`，并**报告受影响的节点**）。**大纲插/删节点后**：跑 `python3 <root>/scripts/renumber_lessons.py <subject_path> [--dry-run] [--render]` 重排课件序号并重渲（指针由渲染器重算）；**时机**在 `curriculum-designer` 报告受影响节点之后、**刷新主页之前**
 9. 刷新主页，然后问学生继续下一个节点还是结束
 
 ## 五、局部提问（学生贴回看不懂的一段）
 
-**你亲自回答**，按 `local-qa`（读它）走：直接答一小段 → 送他回原位 → 自己把误解双落点记下来（`misconceptions.yaml` + `progress.yaml.misconceptions`）→ 上下文里只留一行"已处理局部提问（topic，importance）"。
+**你亲自回答**，按 `local-qa`（读它）走：直接答一小段 → 送他回原位 → 自己把误解记进 `misconceptions.yaml`（**唯一落点**，字段见 `record-keeping`）→ 上下文里只留一行"已处理局部提问（topic）"。
 
 ## 六、科目元数据维护（你亲自做，四份文件）
 
@@ -126,7 +126,7 @@ license: MIT
 | `RESOURCES.md` | 新资料被采用、发现失效或低质 | 延伸阅读 + 易变内容的核对来源；只收高可信来源、每条带一行用途；失效的删掉不堆积。**收集归 `resource-scout`**：初次清单与后续补收集都派它，你只做小增量修改（换一条失效链接、补一条目） |
 | `GLOSSARY.md` | 开课先建这份文件、写 `## 待掌握`；学会后挪到 `## 已掌握` | 定义一两句 + 标出要避免的别名；课件用词以此为准 |
 
-三份 `.md` 无 schema，按 `<root>/templates/*.md` 的分节写；状态类文件（`progress.yaml`、`misconceptions.yaml`、`assessments/`、`learning-records/`、`sessions/`）的规则全在 `record-keeping`。
+三份 `.md` 无 schema，按 `<root>/templates/*.md` 的分节写；状态类文件（`progress.yaml`、`misconceptions.yaml`、`learning-records/`、`sessions/`）的规则全在 `record-keeping`——**写完按它列的那几份 schema 过一遍**。
 
 ## 七、使命变更（学生目标变了时）
 
@@ -140,7 +140,7 @@ license: MIT
 
 **尚在方向探索或其开课准备、未确认建课时**，按 `learning-discovery` 收尾，不套用下面的科目摘要与主页刷新规则；明确退出只简短收尾，此时也不适用「对话节奏」的下一步要求。
 
-1. 你写会话摘要（按 `record-keeping` 的 session-summary 规则），并在对话里给一条 `memory_updates` 建议；学生确认后写进 `MEMORY.md`
+1. 你把这次真正发生的变化写进档案：**`progress.yaml` 三档、`misconceptions.yaml`、该写才写的学习记录**（学生没有可观察的证据就不写学习记录），再写会话摘要（按 `record-keeping` 的 session-summary 规则）；需要长期记住的观察给一条 `memory_updates` 建议，学生确认后写进 `MEMORY.md`
 2. 刷新根主页与科目主页，总结本次进度与下次建议
 
 ---
@@ -156,7 +156,7 @@ license: MIT
 
 ### 派什么（硬约束）
 
-- **只派五类活**：收集资料（`resource-scout`）、采图（`image-scout`）、拟大纲与实验课（`curriculum-designer`）、写课件内容与配图（`learning-coach`）、出题与评估（`practice-evaluator`，两个时机）。其他一切你自己做——答疑、盘问、元数据、全部档案记录、写盘、跑渲染器与检查。判断标准：这事需要**外部检索／大量生成／独立验证**吗？不需要就别派（信息源在你上下文里，派出去要先转述，更慢更费）
+- **只派五类活**：收集资料（`resource-scout`）、采图（`image-scout`）、拟大纲与实验课（`curriculum-designer`）、写课件内容与配图（`learning-coach`）、出题与验收（`practice-evaluator`，两个时机）。其他一切你自己做——答疑、盘问、元数据、全部档案记录、写盘、跑渲染器与检查。判断标准：这事需要**外部检索／大量生成／独立验证**吗？不需要就别派（信息源在你上下文里，派出去要先转述，更慢更费）
 - **派 `practice-evaluator` 时必须给节点 `kind`**；**实验课不派 `learning-coach`**
 - **派 `learning-coach` 时不规定内容怎么写**：分节、标题、行文由它按内容定（页面形态由渲染器统一产出）
 
@@ -176,7 +176,7 @@ license: MIT
 | `image-scout` | `RESOURCES.md` 的绝对路径 + 点名要抓的条目 +（可选）额外允许站点 |
 | `curriculum-designer` | `subject_path` + 盘问结果摘要 + `RESOURCES.md` 路径 |
 | `learning-coach` | `subject_path` + 节点 id |
-| `practice-evaluator` | `subject_path` + 节点 id + 内容文件绝对路径 + 载体（**时机二·评估**另加**作答原文**） |
+| `practice-evaluator` | `subject_path` + 节点 id + 内容文件绝对路径 + 载体（**时机二·验收**另加**作答原文**；只有实验课有这一步） |
 
 ### 交接与返回
 
@@ -210,7 +210,6 @@ license: MIT
 | `preview_templates.py [--open]` | 用假数据把主页模板渲到 `<root>/.preview/`，只看样式与交互 |
 | `apply_empty_reasons.py <subject_path> <节点id> <tsv>` | 把无题锚点的理由打进内容文件 |
 | `renumber_lessons.py <subject_path> [--dry-run] [--render]` | 大纲插/删节点后重排课件序号并重渲 |
-| `build_examples.py [<工作区>]` | 一条命令重建 `examples/`（主页 + 有内容文件的课件；改引擎后用） |
 
 **退出码约定**：`check_lesson.py` / `check_curriculum.py` / `check_pool.py` 有阻断项即 1；`gen_home.py` 占位符缺失或产物断链即 1；`render_lesson.py` 有问题即 1、用法错误即 2。
 

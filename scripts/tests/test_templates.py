@@ -115,42 +115,19 @@ def main():
           f'前端={sorted(keys)} 语法模块={sorted(colored)}')
     check('python 两边都有', 'python' in keys and 'python' in colored)
 
-    # ── 四、共享层与课件层副本：examples 是产物，副本过期页面就静默不亮（本次事故的活样本）──
-    # 清单只有一份（scripts/lessonfile.py）：共享层整份 + 每个科目的课件层三件，逐字节比对。
-    # examples 的 katex/fonts/LICENSE 一度未跟踪，正是它让整树比对一直做不了。
+    # ── 四、题型：quiz.js 认的题型与 question.schema.json 的词表逐个相等 ──────────────
+    # 词表多一种而前端不认 = 出题人照规格出的题在页面上全走「数据不完整」兜底，且没有任何报错。
+    schema_kinds = json.loads(read('schemas/question.schema.json'))['properties']['kind']['enum']
+    quiz = read('templates/assets/quiz.js')
+    match_kinds = re.search(r'var FIELD_GROUPS = \{([\s\S]*?)\n  \};', quiz)
+    check('quiz.js 仍有 FIELD_GROUPS 题型表', match_kinds is not None)
+    quiz_kinds = re.findall(r"^    '([^']+)':", match_kinds.group(1), re.M) if match_kinds else []
+    check('quiz.js 的题型与 question.schema.json 逐个相等',
+          sorted(quiz_kinds) == sorted(schema_kinds), f'前端={quiz_kinds} schema={schema_kinds}')
+
+    # ── 五、templates/assets 顶层只放清单里的东西（清单只有一份：scripts/lessonfile.py）──
     sys.path.insert(0, str(REPO / 'scripts'))
     import lessonfile
-
-    mismatch = []
-    for name in lessonfile.SHARED_FILES:
-        source = REPO / 'templates' / 'assets' / name
-        copy = REPO / 'examples' / '.learning' / 'assets' / name
-        if not copy.is_file() or source.read_bytes() != copy.read_bytes():
-            mismatch.append(name)
-    for name in lessonfile.SHARED_DIRS:
-        root = REPO / 'templates' / 'assets' / name
-        for path in sorted(root.rglob('*')):
-            if not path.is_file():
-                continue
-            relative = path.relative_to(root)
-            copy = REPO / 'examples' / '.learning' / 'assets' / name / relative
-            if not copy.is_file() or path.read_bytes() != copy.read_bytes():
-                mismatch.append(f'{name}/{relative}')
-    check('examples 共享层与 templates/assets 逐字节一致（整份清单）', not mismatch,
-          f'{len(mismatch)} 个文件不一致或缺失：{mismatch[:3]}'
-          '（跑 python3 scripts/build_examples.py 重新生成）')
-
-    subject_mismatch = []
-    for subject_dir in sorted((REPO / 'examples' / '.learning' / 'subjects').iterdir()):
-        if not subject_dir.is_dir():
-            continue
-        for name in lessonfile.SUBJECT_FILES:
-            source = REPO / 'templates' / 'assets' / name
-            copy = subject_dir / 'assets' / name
-            if not copy.is_file() or source.read_bytes() != copy.read_bytes():
-                subject_mismatch.append(f'{subject_dir.name}/{name}')
-    check('examples 各科目的课件层组件与模板逐字节一致', not subject_mismatch,
-          f'{subject_mismatch}（跑 python3 scripts/build_examples.py 重新生成）')
 
     listed = (set(lessonfile.SHARED_DIRS) | set(lessonfile.SHARED_FILES)
               | set(lessonfile.SUBJECT_FILES) | {lessonfile.ASSET_DOC})

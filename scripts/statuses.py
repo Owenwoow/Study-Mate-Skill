@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""状态与课型词表的唯一口径：从 `schemas/*.schema.json` 读，别在这里抄第二份。
+"""状态、课型与题型词表的唯一口径：从 `schemas/*.schema.json` 读，别在这里抄第二份。
 
 这些取值本来就在 schema 里——那是数据的合同。原先 Python 侧还各留一份常量
 （`gen_home.py` 里三组、`preview_templates.py` 里两组），宿主导出层再手写一段，
@@ -10,8 +10,9 @@
 
 1. **从 schema 读**词表。节点状态读 `progress.schema.json`（读不到就退到
    `curriculum.schema.json`——两份本来就该相等，由测试守着），科目状态读
-   `subject.schema.json`，课型读 `curriculum.schema.json`。**数组顺序是载荷**：
-   「完成」= 在 `能独立应用` 处切一刀取后半段，根主页卡片顺序按科目状态的 enum 顺序。
+   `subject.schema.json`，课型读 `curriculum.schema.json`，题型读
+   `question.schema.json`。**数组顺序是载荷**：
+   「完成」= 在 `已学完` 处切一刀取后半段，根主页卡片顺序按科目状态的 enum 顺序。
 2. **状态 → 卡片 class 的映射只有这里一份**（`NODE_STATUS_CLASS`、`SUBJECT_STATUS_TAG`）。
    测试断言「enum 里每个状态都有配色」——以后往 schema 加状态、忘了配色，就会红。
 3. **读不到 schema 时明确说明**（`problems()` 给一句可直接展示的话）：词表按空处理，
@@ -31,8 +32,26 @@ import os
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SCHEMA_DIR = os.path.join(ROOT, 'schemas')
 
-# 「完成」从哪个状态起算（含它自己与它之上的状态，按 enum 顺序）
-DONE_FROM = '能独立应用'
+# 「完成」从哪个状态起算（含它自己与它之上的状态，按 enum 顺序）。
+# 三档词表里「已学完」就是完成；旧六档读进来时先经 normalize_status() 映射成三档。
+DONE_FROM = '已学完'
+
+# 旧六档 → 三档（与上游 LEGACY_TIER_MAP 同一张表）。旧工作区照旧读得进，写回时用三档。
+LEGACY_TIER_MAP = {
+    '初步理解': '学习中',
+    '能独立应用': '已学完',
+    '需要复习': '已学完',
+    '已通过项目验证': '已学完',
+}
+# 卡片与路线图上的「完成度」：由三档状态算（掌握度字段已取消，不再有第二个数）
+TIER_FILL = {'未开始': 0.0, '学习中': 0.5, '已学完': 1.0}
+
+
+def normalize_status(raw):
+    """读侧归一：旧六档映射成三档，三档原样返回；野词原样返回（由调用方告警）。"""
+    text = str(raw or '').strip()
+    return LEGACY_TIER_MAP.get(text, text)
+
 # 当前节点取哪个状态
 CURRENT_STATUS = '学习中'
 NOT_STARTED_TEXT = '还没开始'
@@ -45,10 +64,7 @@ FALLBACK_CLASS = 'todo'
 NODE_STATUS_CLASS = {
     '未开始': 'todo',
     '学习中': 'learning',
-    '初步理解': 'learning',
-    '能独立应用': 'done',
-    '需要复习': 'review',
-    '已通过项目验证': 'verified',
+    '已学完': 'done',
 }
 # 科目状态 → (徽标 class 后缀, 色点后缀)；徽标文本写 status 原值
 SUBJECT_STATUS_TAG = {
@@ -104,7 +120,10 @@ NODE_STATUSES = _node_statuses()
 SUBJECT_STATUSES, _subject_problem = _try_enum('subject.schema.json', ['properties', 'status'])
 KINDS, _kind_problem = _try_enum('curriculum.schema.json', ['properties', 'nodes', 'items',
                                                            'properties', 'kind'])
-for _problem in (_subject_problem, _kind_problem):
+# 题型：词表在 question.schema.json（`templates/assets/quiz.js` 认的题型与它对齐，
+# 由 test_templates.py 钉住）。检查器按它判「未知题型」。
+QUESTION_KINDS, _question_problem = _try_enum('question.schema.json', ['properties', 'kind'])
+for _problem in (_subject_problem, _kind_problem, _question_problem):
     if _problem:
         _problems.append(_problem)
 

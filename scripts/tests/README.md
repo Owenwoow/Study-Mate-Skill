@@ -25,7 +25,7 @@ bash scripts/tests/run_tests.sh --browser    # 再加需要 google-chrome 的 3 
 | `test_lessonfile.py` | `lessonfile.py`：课件文件名、共享层／课件层清单（全仓库唯一一份）与安装拷贝 |
 | `test_lessonfmt.py` | `lessonfmt.py`：内容格式的围栏判定——语言标签白名单、写错标签带行号报错 |
 | `test_statuses.py` | `statuses.py`：状态与课型词表从 `schemas/` 读，脚本与 schema 不漂移 |
-| `test_templates.py` | 模板与规格一致：术语表/使命/共享记忆的分节、`subject.yaml` 键与 schema、围栏白名单与前端配色表相等、`examples/` 副本与模板逐字节一致 |
+| `test_templates.py` | 模板与规格一致：术语表/使命/共享记忆的分节、`subject.yaml` 键与 schema、围栏白名单与前端配色表相等、`quiz.js` 题型与 `question.schema.json` 相等、`templates/assets/` 顶层都登记在清单里 |
 | `test_handoff.py` | 角色暂存交接：schema、角色/节点绑定、路径边界、symlink、`deliver/` 全覆盖与 SHA-256 |
 | `test_python_syntax.py` | 全部 `.py` 能编译（含非法转义警告当错误），把这类问题拦在编译期 |
 | `quiz_dom_test.js` | `templates/assets/quiz.js`：选择题判分、开放题展开/收起、坏数据兜底、计分，以及围栏 → `<pre><code>` 的渲染与 `textContent` 语义、异常数据隔离和开头围栏（33 项） |
@@ -47,6 +47,11 @@ bash scripts/tests/run_tests.sh --browser    # 再加需要 google-chrome 的 3 
 `measure.mjs`、`hovers.mjs`、`shot.mjs` 是**手动工具**不是断言套件，要自己给页面 URL
 （`node scripts/tests/browser/measure.mjs file:///…/index.html [--hover ".sel"]`、
 `node scripts/tests/browser/shot.mjs <file-url> <out-prefix> <css-selector>`）。
+
+阅读端那条套件用的夹具在 [fixtures/](fixtures/)：`mini-react.js` 是只够跑阅读端的最小渲染器
+（宿主那份 React 打包在 bundle 里，拿不到），`host-theme-tokens.json` 是宿主主题 token 的快照，
+`client-css.mjs` 负责从 `lib/client.js` 里解析 CSS 与 token 块。夹具页的 CSS 与 JS **都从源码现取**，
+不手抄一份标记。
 
 ## 写新测试
 

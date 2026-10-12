@@ -15,18 +15,30 @@
    上面那种 JSON，不写 HTML、也不用知道实体引号的写法。下面这份契约管的是 **JSON 里写什么
    字段、这些字段进页面长什么样**。
 
-   data-quiz 是 JSON 数组，每项是一道题，**两种题型二选一**（不能同时写两组字段）：
+   data-quiz 是 JSON 数组，每项是一道题。**四种题型**（词表在 schemas/question.schema.json）；
+   可写 `kind` 显式声明（客观题 / 开放题 / 预测验证 / 交付物），不写就按字段推断，
+   **各组字段不能混写**：
 
-   题型一 · 选择题（页内自动判）
+   题型一 · 选择题（kind: 客观题；页内自动判）
      q     题干（字符串，必填，两种题型都要）
      opts  选项数组（必填，≥2 项，每项都是非空字符串）
      ans   正确选项下标，从 0 开始（必填，必须落在 opts 范围内）
      why   答完显示的一句解释（必填：检查会拦，见 scripts/check_lesson.py）
 
-   题型二 · 开放题（学生自评，不贴回会话）
+   题型二 · 开放题（kind: 开放题；学生自评，不贴回会话）
      q         题干（字符串，必填）
      answer    参考答案（必填）
      criteria  判分要点：凭什么算答对了（必填；学生点开对照时看到的就是这两段）
+
+   题型三 · 预测验证（kind: 预测验证；先写预测、再跑起来对照）
+     q     题干（必填）：要学生预测什么（"把 i 初值改成 1，循环会跑几次？"）
+     预测  参考预测（必填）：出题人给的正确预测
+     比对  跑完之后的比对（必填）：实测是什么、与常见错误预测差在哪
+
+   题型四 · 交付物（kind: 交付物；造出可运行的东西）
+     q       题干（必填）
+     交付物  要造出什么（必填）
+     证据    可运行证据（必填）：测试命令 / 断言 / 期望输出——学生自己跑它来验收
 
    题面里的代码（`q` / `answer` / `criteria` / `why` 四个字段都适用）：
      多行代码写进**围栏**——起止各占一整行，中间照原样写（**缩进与空格全保留**）：
@@ -47,12 +59,16 @@
        **Markdown 与 HTML 标记一律原样显示**：`**加粗**` 会出现星号、`- 列表`/`# 标题`
        不变成列表或标题、行内 `` `code` `` 带反引号、`<b>` 露出尖括号。要强调就用短句
        与空行；要代码就用围栏。检查对这类标记给 WARN（`check_lesson.py`）。
+     - 预测验证与交付物的字段（`预测` / `比对` / `交付物` / `证据`）同样是纯文本，规则同上。
      - 每个字段落在哪：`q` 是题干（一组里多道题时自动加「1. 」序号）；`opts` 按数组顺序
        变成可点按钮；`why` 接在「✓ 对／✗ 再想想」后面同一行；`answer` 与 `criteria` 收在
        「想好了，看参考答案」按钮后面，各带「参考答案」「判分要点」小标题。
      - 空行就是空行；围栏前后的空行会被去掉（间距由样式给，别用它凑留白）。
 
    行为：
+   - 预测验证：先只显示题干和一个输入框，学生**写下自己的预测**后"写好了，看实际结果"才可点；
+     点开显示「参考预测」「跑完的比对」。预测只留在当前页面，不落盘、不贴回会话
+   - 交付物：直接列出「要造出」与「可运行证据」——这是任务，不是答案，做完自己跑证据验收
    - 选择题：点选项立刻给反馈（对/错 + why）；选错的标红、正确的标绿；允许改选，计分只算第一次；
      一组里的选择题全部答完后显示"答对 N / M"，并用 Sayo toast 提示一次（M 只数选择题）
    - 开放题：先只显示题干和"想好了，看参考答案"按钮；点开显示参考答案 + 判分要点；再点一次收起
@@ -293,6 +309,66 @@
     block.appendChild(wrap);
   }
 
+  /* ── 两段带小标题的文字（参考答案 / 判分要点 这类） ─────────── */
+  function labeled(container, label, text, className) {
+    var head = document.createElement('p');
+    head.className = 'quiz__answer-label';
+    head.textContent = label;
+    container.appendChild(head);
+    container.appendChild(richBlock(className, text || ''));
+  }
+
+  /* ── 预测验证：先写下自己的预测，才能看参考预测与比对 ─────────── */
+  function buildPredict(block, item, index, total) {
+    block.appendChild(questionBlock(item, index, total));
+
+    var wrap = document.createElement('div');
+    wrap.className = 'quiz__open quiz__predict';
+
+    var input = document.createElement('textarea');
+    input.className = 'quiz__predict-input';
+    input.rows = 2;
+    input.placeholder = '先写下你的预测（别先跑）';
+    input.setAttribute('aria-label', '你的预测');
+
+    var reveal = document.createElement('button');
+    reveal.type = 'button';
+    reveal.className = 'quiz__reveal';
+    reveal.textContent = '写好了，看实际结果';
+    reveal.disabled = true;
+
+    var answer = document.createElement('div');
+    answer.className = 'quiz__answer';
+    answer.hidden = true;
+    labeled(answer, '参考预测', item['预测'], 'quiz__answer-text');
+    labeled(answer, '跑完的比对', item['比对'], 'quiz__criteria');
+
+    input.addEventListener('input', function () {
+      reveal.disabled = !nonEmptyText(input.value);
+    });
+    reveal.addEventListener('click', function () {
+      if (!nonEmptyText(input.value)) return;     /* 没写预测就等于没做这一层 */
+      answer.hidden = !answer.hidden;
+      reveal.textContent = answer.hidden ? '写好了，看实际结果' : '收起';
+    });
+
+    wrap.appendChild(input);
+    wrap.appendChild(reveal);
+    wrap.appendChild(answer);
+    block.appendChild(wrap);
+  }
+
+  /* ── 交付物：要造出什么 + 怎么验收（是任务，不是答案，直接展示）── */
+  function buildDeliverable(block, item, index, total) {
+    block.appendChild(questionBlock(item, index, total));
+
+    var wrap = document.createElement('div');
+    wrap.className = 'quiz__open quiz__deliverable';
+    labeled(wrap, '要造出', item['交付物'], 'quiz__answer-text');
+    labeled(wrap, '可运行证据（做完自己跑它验收）', item['证据'], 'quiz__criteria');
+    block.appendChild(wrap);
+  }
+
   /* ── 数据不完整时的兜底 ─────────────────────────────────────── */
   function buildBroken(block, item, index, total) {
     var question = questionBlock(item, index, total);
@@ -300,28 +376,49 @@
 
     var hint = document.createElement('p');
     hint.className = 'feedback wrong';
-    hint.textContent = '（这道题的数据不完整：选择题要 opts/ans/why，开放题要 answer/criteria）';
+    hint.textContent = '（这道题的数据不完整：选择题要 opts/ans/why，开放题要 answer/criteria，' +
+                       '预测验证要 预测/比对，交付物要 交付物/证据）';
     block.appendChild(hint);
   }
 
-  /* ── 题型判定（与检查、分层规范一致：两组字段只能二选一）──────── */
+  /* ── 题型判定（与检查、分层规范一致：各组字段不能混写；写了 kind 就必须与字段相符）── */
   function nonEmptyText(value) {
     return typeof value === 'string' && value.trim().length > 0;
   }
 
+  var FIELD_GROUPS = {
+    '客观题': ['opts', 'ans', 'why'],
+    '开放题': ['answer', 'criteria'],
+    '预测验证': ['预测', '比对'],
+    '交付物': ['交付物', '证据']
+  };
+
+  /* 题目对象 + 没写别的题型的字段 + kind 缺省或等于本题型 */
+  function shapedAs(item, kind) {
+    if (!item || typeof item !== 'object' || Array.isArray(item) || !nonEmptyText(item.q)) return false;
+    if ('kind' in item && item.kind !== kind) return false;
+    return Object.keys(FIELD_GROUPS).every(function (other) {
+      return other === kind || FIELD_GROUPS[other].every(function (key) { return !(key in item); });
+    });
+  }
+
   function isChoiceItem(item) {
-    return !!item && typeof item === 'object' && !Array.isArray(item) &&
-           nonEmptyText(item.q) && Array.isArray(item.opts) && item.opts.length >= 2 &&
+    return shapedAs(item, '客观题') && Array.isArray(item.opts) && item.opts.length >= 2 &&
            item.opts.every(nonEmptyText) &&
            typeof item.ans === 'number' && item.ans % 1 === 0 &&
-           item.ans >= 0 && item.ans < item.opts.length && nonEmptyText(item.why) &&
-           !('answer' in item) && !('criteria' in item);
+           item.ans >= 0 && item.ans < item.opts.length && nonEmptyText(item.why);
   }
 
   function isOpenItem(item) {
-    return !!item && typeof item === 'object' && !Array.isArray(item) &&
-           nonEmptyText(item.q) && nonEmptyText(item.answer) && nonEmptyText(item.criteria) &&
-           !('opts' in item) && !('ans' in item);
+    return shapedAs(item, '开放题') && nonEmptyText(item.answer) && nonEmptyText(item.criteria);
+  }
+
+  function isPredictItem(item) {
+    return shapedAs(item, '预测验证') && nonEmptyText(item['预测']) && nonEmptyText(item['比对']);
+  }
+
+  function isDeliverableItem(item) {
+    return shapedAs(item, '交付物') && nonEmptyText(item['交付物']) && nonEmptyText(item['证据']);
   }
 
   whenReady(function () {
@@ -352,6 +449,8 @@
       items.forEach(function (item, index) {
         if (isChoiceItem(item)) buildChoice(block, item, index, items.length, state);
         else if (isOpenItem(item)) buildOpen(block, item, index, items.length);
+        else if (isPredictItem(item)) buildPredict(block, item, index, items.length);
+        else if (isDeliverableItem(item)) buildDeliverable(block, item, index, items.length);
         else buildBroken(block, item, index, items.length);
       });
 

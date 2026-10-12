@@ -31,6 +31,40 @@ except ImportError:
 ROOT = Path(__file__).resolve().parent.parent
 SCHEMA_PATH = ROOT / "schemas" / "curriculum.schema.json"
 
+sys.path.insert(0, str(ROOT / "scripts"))
+import statuses  # noqa: E402  旧六档 → 三档的映射只有一份
+
+
+def normalized_for_schema(data):
+    """只给 schema 校验用的副本：节点状态按旧六档映射成三档、去掉已取消的 mastery。"""
+    copy = dict(data)
+    nodes = data.get("nodes")
+    if isinstance(nodes, list):
+        fixed = []
+        for node in nodes:
+            if isinstance(node, dict):
+                node = {key: value for key, value in node.items() if key != "mastery"}
+                if isinstance(node.get("status"), str):
+                    node["status"] = statuses.normalize_status(node["status"])
+            fixed.append(node)
+        copy["nodes"] = fixed
+    return copy
+
+
+def legacy_notes(data):
+    """旧大纲里还留着的旧写法 → 不阻断的提示（写回时改掉）。"""
+    nodes = data.get("nodes") if isinstance(data.get("nodes"), list) else []
+    with_mastery = [n.get("id") for n in nodes if isinstance(n, dict) and "mastery" in n]
+    legacy_status = sorted({n["status"] for n in nodes if isinstance(n, dict)
+                            and isinstance(n.get("status"), str) and n["status"] in statuses.LEGACY_TIER_MAP})
+    notes = []
+    if with_mastery:
+        notes.append(f"{len(with_mastery)} 个节点还带已取消的 mastery 字段（读时忽略；下次写回大纲时删掉）")
+    if legacy_status:
+        mapped = "、".join(f"{s}→{statuses.LEGACY_TIER_MAP[s]}" for s in legacy_status)
+        notes.append(f"节点状态用了旧六档（按 {mapped} 读；写回时用三档）")
+    return notes
+
 
 def main(argv: list[str]) -> int:
     if len(argv) < 2:
@@ -61,10 +95,15 @@ def main(argv: list[str]) -> int:
             continue
 
         errors: list[str] = []
+        # 旧大纲兼容（不阻断）：六档状态读侧映射成三档、已取消的 mastery 忽略——
+        # 学习档案是学生的积累，词表改了不该让旧文件一下子过不了检查；写回时才用新词表。
+        legacy = legacy_notes(data)
+        for note in legacy:
+            print(f"  [WARN] {note}")
         schema_checked = jsonschema is not None
         if schema_checked:
             validator = jsonschema.Draft7Validator(schema)
-            for err in sorted(validator.iter_errors(data), key=lambda e: list(e.path)):
+            for err in sorted(validator.iter_errors(normalized_for_schema(data)), key=lambda e: list(e.path)):
                 loc = "/".join(str(p) for p in err.path) or "<root>"
                 errors.append(f"schema  {loc}: {err.message}")
         else:

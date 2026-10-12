@@ -41,11 +41,6 @@ DOCS = [
     ("工作区模板", "templates/RESOURCES.md", "资源清单模板"),
     ("工作区模板", "templates/subject.yaml", "科目元数据模板"),
     ("工作区模板", "templates/README.md", "模板目录说明"),
-    ("示例科目", "examples/.learning/MEMORY.md", "示例：共享记忆"),
-    ("示例科目", "examples/.learning/subjects/typescript-web-api/MISSION.md", "示例：使命"),
-    ("示例科目", "examples/.learning/subjects/typescript-web-api/curriculum.yaml", "示例：课程 DAG"),
-    ("示例科目", "examples/.learning/subjects/typescript-web-api/progress.yaml", "示例：进度"),
-    ("示例科目", "examples/.learning/subjects/typescript-web-api/lab/README.md", "示例：lab 说明"),
 ]
 
 
@@ -247,7 +242,7 @@ def fig_invoke() -> str:
     f.box("C10", CX, 872, CW, 64, ["*⑦ 落 curriculum.yaml / progress.yaml", "~check_curriculum · check_pool", "~gen_home 刷新主页"], "c",
           "references/protocols/record-keeping.md", "## 主页刷新")
     f.box("F10", FX, 872, FW, 64, ["curriculum.yaml", "progress.yaml", "~index.html（主页）"], "f",
-          "examples/.learning/subjects/typescript-web-api/curriculum.yaml")
+          "references/protocols/record-keeping.md")
     f.arrow("C9", "C10")
     f.arrow("A9b", "C10", "s", "e", "回大纲内容", ob=-14)
     f.arrow("C10", "F10", "e", "w", oa=14, ob=14)

@@ -227,7 +227,7 @@ body.is-ready .learn-subject-card { animation: none; }
     <div class="syo-stat"><span class="syo-stat-value" id="learn-stat-total">–</span><span class="syo-stat-label">科目</span></div>
     <div class="syo-stat"><span class="syo-stat-value" id="learn-stat-active">–</span><span class="syo-stat-label">进行中</span></div>
     <div class="syo-stat"><span class="syo-stat-value" id="learn-stat-done">–</span><span class="syo-stat-label">已完成</span></div>
-    <div class="syo-stat"><span class="syo-stat-value" id="learn-stat-mastery">–</span><span class="syo-stat-label">平均掌握度</span></div>
+    <div class="syo-stat"><span class="syo-stat-value" id="learn-stat-mastery">–</span><span class="syo-stat-label">平均完成度</span></div>
   </section>
 
   <!-- 状态筛选：按 subject.yaml 的 status 过滤卡片；计数由脚本填充 -->
@@ -276,7 +276,7 @@ body.is-ready .learn-subject-card { animation: none; }
           暂停 syo-tag-dot--yellow、已完成 syo-tag-dot--green）
       · data-status 写 status 原值（供筛选脚本比对）；
         data-progress = 完成节点数 ÷ 总节点数（完成 = 状态达“能独立应用”及以上）；
-        data-mastery = progress.yaml 中各节点 mastery 的平均值（0–1）
+        data-mastery = 各节点「完成度」的平均值（0–1；按三档折算：未开始 0 / 学习中 0.5 / 已学完 1，掌握度字段已取消）
       · 进度条内联 style="width:NN%" 用 data-progress 换算，保证无 JS 时也能看到进度
       · 当前节点 = progress.yaml / curriculum.yaml 中状态为“学习中”的节点标题；
         没有正在学的节点时写“还没开始”

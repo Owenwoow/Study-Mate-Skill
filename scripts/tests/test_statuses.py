@@ -1,14 +1,17 @@
 #!/usr/bin/env python3
-"""状态与课型词表模块（scripts/statuses.py）的单元测试。
+"""状态、课型与题型词表模块（scripts/statuses.py）的单元测试。
 
-为什么单独有这一道：六个节点状态原先在仓库里有七份副本（两份 schema、Python 常量、
+为什么单独有这一道：节点状态原先在仓库里有七份副本（两份 schema、Python 常量、
 预览假数据、模板注释、宿主提示词、规格散文），Antigravity 那份已经漂成 4/6，而
 **没有任何测试把两边钉在一起**。口径收进一个模块、并从 schema 读之后，这里钉三件事：
 
 1. 词表确实来自 schema，且**数组顺序**（「完成」的切点、主页卡片排序）是载荷；
-2. schema 里每个状态、每个科目状态、每个课型都有配色/名字——以后往 schema 加值、
+2. schema 里每个状态、每个科目状态、每个课型、每个题型都有配色/名字——以后往 schema 加值、
    忘了配色，这里就红；
 3. 读不到 schema 时**降级但不静默**（词表空 + 一条可展示的告警；退路只走一层）。
+
+三档词表（#71）另有一条反向断言：旧六档的四个词**不在**词表里——读侧映射归读侧
+（`statuses.LEGACY_TIER_MAP` / `normalize_status()`），写侧只认三档。
 
 用法：python3 scripts/tests/test_statuses.py
 """
@@ -55,17 +58,22 @@ def test_read_from_schema():
     check('课型读自 schema',
           statuses.KINDS == schema_enum('schemas/curriculum.schema.json', 'properties', 'nodes',
                                         'items', 'properties', 'kind'))
+    check('题型读自 schema（question.schema.json 的 kind.enum）',
+          statuses.QUESTION_KINDS == schema_enum('schemas/question.schema.json', 'properties', 'kind'),
+          f'{statuses.QUESTION_KINDS}')
     check('读 schema 没有留下问题', statuses.problems() == [], f'{statuses.problems()}')
 
 
 def test_order_is_load_bearing():
-    check('「完成」从「能独立应用」起算（含它自己）',
+    check('「完成」从「已学完」起算（含它自己）',
           statuses.DONE_FROM in statuses.NODE_STATUSES
           and set(statuses.DONE_STATUSES) == set(statuses.NODE_STATUSES[statuses.NODE_STATUSES.index(statuses.DONE_FROM):]),
           f'{sorted(statuses.DONE_STATUSES)}')
-    check('「需要复习」按 enum 顺序也算完成（既有语义，别改错）',
-          '需要复习' in statuses.DONE_STATUSES)
-    check('「初步理解」不算完成', '初步理解' not in statuses.DONE_STATUSES)
+    check('「已学完」算完成、「学习中」不算',
+          '已学完' in statuses.DONE_STATUSES and '学习中' not in statuses.DONE_STATUSES)
+    check('旧六档的四个词已不在词表里（读侧映射，写侧不认）',
+          not ({'初步理解', '能独立应用', '需要复习', '已通过项目验证'} & set(statuses.NODE_STATUSES)),
+          f'{statuses.NODE_STATUSES}')
     check('科目状态排序 = schema 的 enum 顺序',
           statuses.SUBJECT_STATUS_ORDER == {status: index for index, status in enumerate(statuses.SUBJECT_STATUSES)},
           f'{statuses.SUBJECT_STATUS_ORDER}')
@@ -115,6 +123,17 @@ def test_degrade_without_schema():
     finally:
         statuses.SCHEMA_DIR = saved_dir
         statuses._problems[:] = saved_problems
+
+
+def test_legacy_tiers_map_to_three():
+    expected = {'初步理解': '学习中', '能独立应用': '已学完', '需要复习': '已学完',
+                '已通过项目验证': '已学完', '未开始': '未开始', '学习中': '学习中', '已学完': '已学完'}
+    got = {raw: statuses.normalize_status(raw) for raw in expected}
+    check('旧六档读进来归一成三档，三档原样', got == expected, f'{got}')
+    check('映射的落点都在三档词表里',
+          set(statuses.LEGACY_TIER_MAP.values()) <= set(statuses.NODE_STATUS_CLASS))
+    check('野词原样返回（由调用方告警）', statuses.normalize_status('瞎写') == '瞎写')
+    check('完成度按三档折算', statuses.TIER_FILL == {'未开始': 0.0, '学习中': 0.5, '已学完': 1.0})
 
 
 def main():

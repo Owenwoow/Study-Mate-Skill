@@ -672,7 +672,7 @@ summary.learn-node:focus-visible { outline: 2px solid var(--syo-accent); outline
         （有课件时，实验课的说明页也按普通子卡片列在 learn-node__children 里）
       · 前置标签用 prerequisites 里每个 id 对应的节点 title；
         没有前置时写 <span class="learn-node__chip learn-node__chip--none">无</span>
-      · 掌握度：i 的 width 用 mastery × 100；没有 mastery 时按 0 处理
+      · 完成度：i 的 width 用三档折算值 × 100（未开始 0 / 学习中 50% / 已学完 100%）
       · **卡片是地图不是教案**：标题与 objective 都**最多两行**（超出省略号截断），所以两者都要给
         `title` 属性（悬停看全文：`<span class="learn-node__title" title="全文">`）。
         两条软上限由 gen_home.py 在 stderr 提醒（不阻断）：标题 ≤16 字、objective ≤34 字；
