@@ -176,6 +176,35 @@ def test_check_curriculum_legacy_fields():
     check('旧大纲：提示旧六档按三档读', '能独立应用→已学完' in out, out[-400:])
 
 
+def test_check_curriculum_resource_coverage():
+    """同目录的 RESOURCES.md：按 `· 服务 <节点 id>` 报覆盖率、膨胀与野 id（都只提示）。"""
+    import subprocess
+    import yaml
+    nodes = [{'id': nid, 'title': nid, 'kind': '概念', 'objective': '说清它', 'prerequisites': [],
+              'resources': [], 'status': '未开始'} for nid in ('a', 'b', 'c')]
+    data = {'subject': 'demo', 'version': 1, 'nodes': nodes, 'edges': []}
+    resources = '\n'.join([
+        '# demo Resources', '', '## Knowledge', '',
+        '- [Doc: 甲](https://example.com/a) · 服务 a、ghost', '  一行说明',
+        '- [Doc: 乙](https://example.com/b) · 服务 a', '',
+        '## 易变内容的官方核对来源', '',
+        *[f'- [Doc: 官方 {i}](https://example.com/{i}) · 服务 b' for i in range(5)], '',
+        '## Wisdom (Communities)', '', '- [社区](https://example.com/c)', '',
+        '## Gaps', '', '### 找不到权威来源的领域', '', '- 无', ''])
+    with tempfile.TemporaryDirectory(prefix='studymate-coverage-') as directory:
+        path = Path(directory) / 'curriculum.yaml'
+        path.write_text(yaml.safe_dump(data, allow_unicode=True), encoding='utf-8')
+        (Path(directory) / 'RESOURCES.md').write_text(resources, encoding='utf-8')
+        result = subprocess.run([sys.executable, str(REPO / 'scripts' / 'check_curriculum.py'), str(path)],
+                                capture_output=True, text=True, encoding='utf-8')
+    out = result.stdout + result.stderr
+    check('覆盖率：只提示不阻断（退出码 0）', result.returncode == 0, out[-500:])
+    check('覆盖率：报出指不出来源的节点 c', '还有 1 个节点' in out and 'c' in out, out[-500:])
+    check('覆盖率：7 条 > 3 × 2 报膨胀', '7 条来源' in out, out[-500:])
+    check('覆盖率：报野节点 id ghost', 'ghost' in out, out[-500:])
+    check('覆盖率：社区与 Gaps 不计条数', '8 条来源' not in out, out[-500:])
+
+
 def main():
     for name, func in sorted(globals().items()):
         if name.startswith('test_') and callable(func):

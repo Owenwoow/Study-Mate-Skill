@@ -17,8 +17,9 @@
      `[0-9A-Za-z\\u4e00-\\u9fa5-]`、无空格）且总长 ≤60 字符
   ④ `来源 URL`、`许可` 与 `抓取日期` 都非空（页面没标注也要写「未标注」；抓取日期写
      `YYYY-MM-DD`，与 `image-scout` 第 6 步一致，否则课件写不出 figcaption）
-  ⑤ 单张 ≤500 KB——按**磁盘上的文件字节**判；`尺寸` 列是「宽×高」（像素），
-     与体积无关，不参与判定
+  ⑤ 单张 ≤500 KB——按**磁盘上的文件字节**判
+  ⑥ 按文件头复算 png/jpeg/gif/webp 的格式与宽高：扩展名要与真实格式一致，`尺寸` 列
+     （「宽×高」，像素）要与文件头一致——页面上标注的尺寸可能被缩放过，照文件头写
 
 输出：每条问题一行 `<索引路径>:<行号> <问题>`（行号 0 = 索引整体的问题）；
 全部合格时一行 `OK   <索引路径>（N 张）`。图片库为空（索引只有表头、抓不到图）**算合格**——
@@ -82,8 +83,57 @@ def find_header(lines):
     return 0, None
 
 
+SIZE_CELL_RE = re.compile(r'^\s*(\d+)\s*[×xX*]\s*(\d+)\s*$')
+EXT_FORMATS = {'.png': 'png', '.jpg': 'jpeg', '.jpeg': 'jpeg', '.gif': 'gif', '.webp': 'webp'}
+
+
+def image_info(path):
+    """读文件头 → (格式, 宽, 高)；认不出或不是这四种位图返回 None。纯标准库，不解码像素。"""
+    try:
+        with open(path, 'rb') as handle:
+            head = handle.read(64)
+            if head[:8] == b'\x89PNG\r\n\x1a\n' and head[12:16] == b'IHDR':
+                return 'png', int.from_bytes(head[16:20], 'big'), int.from_bytes(head[20:24], 'big')
+            if head[:6] in (b'GIF87a', b'GIF89a'):
+                return 'gif', int.from_bytes(head[6:8], 'little'), int.from_bytes(head[8:10], 'little')
+            if head[:4] == b'RIFF' and head[8:12] == b'WEBP':
+                chunk = head[12:16]
+                if chunk == b'VP8X':
+                    return ('webp', int.from_bytes(head[24:27], 'little') + 1,
+                            int.from_bytes(head[27:30], 'little') + 1)
+                if chunk == b'VP8 ':
+                    return ('webp', int.from_bytes(head[26:28], 'little') & 0x3FFF,
+                            int.from_bytes(head[28:30], 'little') & 0x3FFF)
+                if chunk == b'VP8L':
+                    bits = int.from_bytes(head[21:25], 'little')
+                    return 'webp', (bits & 0x3FFF) + 1, ((bits >> 14) & 0x3FFF) + 1
+                return None
+            if head[:2] != b'\xff\xd8':
+                return None
+            handle.seek(2)                                  # JPEG：逐段找 SOF0..SOF15（跳过 DHT/JPG/DAC）
+            while True:
+                byte = handle.read(1)
+                while byte and byte != b'\xff':
+                    byte = handle.read(1)
+                marker = handle.read(1)
+                while marker == b'\xff':
+                    marker = handle.read(1)
+                if not marker:
+                    return None
+                code = marker[0]
+                if code in (0xD8, 0x01) or 0xD0 <= code <= 0xD7:
+                    continue
+                length = int.from_bytes(handle.read(2), 'big')
+                if 0xC0 <= code <= 0xCF and code not in (0xC4, 0xC8, 0xCC):
+                    data = handle.read(5)
+                    return 'jpeg', int.from_bytes(data[3:5], 'big'), int.from_bytes(data[1:3], 'big')
+                handle.seek(length - 2, 1)
+    except (OSError, ValueError):
+        return None
+
+
 def check_row(cells, index, pool_dir, number):
-    """② 文件存在 + ③ 文件名 + ④ 来源/许可/抓取日期非空 + ⑤ 体积。返回 [(行号, 问题)]。"""
+    """② 文件存在 + ③ 文件名 + ④ 来源/许可/抓取日期非空 + ⑤ 体积 + ⑥ 文件头。返回 [(行号, 问题)]。"""
     problems = []
 
     def cell(name):
@@ -124,6 +174,24 @@ def check_row(cells, index, pool_dir, number):
             # 只报字节：四舍五入成 KB 时 512001 B 会印成「500 KB > 500 KB」，自相矛盾
             problems.append((number, f'超体积：{name} {size} B > {MAX_BYTES} B'
                                      f'（{MAX_BYTES // 1024} KB 上限；不缩放、超了就放弃）'))
+        # ⑥ 按文件头复算格式与尺寸（只查 png/jpeg/gif/webp；svg 等其它格式不查）
+        expected = EXT_FORMATS.get(os.path.splitext(name)[1].lower())
+        info = image_info(target) if expected else None
+        if expected and info is None:
+            problems.append((number, f'文件头认不出：{name} 看起来不是 {expected}（扩展名与内容对不上，'
+                                     '或文件坏了）'))
+        elif info:
+            fmt, width, height = info
+            if fmt != expected:
+                problems.append((number, f'格式与扩展名不符：{name} 的文件头是 {fmt}，扩展名却是 {expected}'))
+            declared = cell('尺寸')
+            match = SIZE_CELL_RE.match(declared) if declared else None
+            if index.get('尺寸') is not None and not match:
+                problems.append((number, f'`尺寸` 要写成 宽×高（像素，照文件头）：现在是「{declared}」'
+                                         f'，文件头是 {width}×{height}'))
+            elif match and (int(match.group(1)), int(match.group(2))) != (width, height):
+                problems.append((number, f'`尺寸` 与文件头对不上：索引写 {declared.strip()}，'
+                                         f'文件头是 {width}×{height}（页面标注可能被缩放过，照文件头写）'))
     return problems
 
 

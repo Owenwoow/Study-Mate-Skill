@@ -54,6 +54,7 @@ license: MIT
       ```
       `image-scout` 点名的站点不够用时，**再给一批"额外允许站点"**（如 Wikimedia Commons、对应语言的维基条目、官方教程的示例画廊）。**图片库为空不阻塞**：抓不到图只记 `Gaps`，大纲与课件照常产出。后续节点若需要新图，再按需派一次 `image-scout`（补图）。
    4. 派 `curriculum-designer` 产大纲（值：`subject_path` + 盘问结果摘要 + `RESOURCES.md` 路径）
+   4b. **给资源清单补「服务」标记**：按 `curriculum-designer` 报告里的「资源 ↔ 节点对照」，在 `RESOURCES.md` 每条知识来源的行末补 `· 服务 <节点 id>`（多条用「、」分隔；社区与 `## Gaps` 不写）。补完跑 `check_curriculum.py` 看覆盖率提示（指不出来源的节点 → 按需派 `resource-scout` 补收集）
    5. 建 `progress.yaml`：`nodes: {}`（**只写有变化的节点**，没写的按大纲初始值算）、`misconceptions: []`，`project` 只写 `current`；过 `schemas/progress.schema.json`
    6. 刷新主页
 5. **报告 + 给下一步（不许只报告就停）**：报上次学到哪、这次建议学什么（依据薄弱点与实验课进度）；新科目还要报清"几个节点／几个实验课／第一课叫什么／什么课型"。然后按「对话节奏」给下一步并问"开始吗"。开场顺带把根主页（`<LEARN_WORKSPACE>/index.html`）呈给学生——**并把绝对路径写在回复里**（点得开才算给到）。

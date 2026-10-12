@@ -410,6 +410,32 @@
 /* .syo-editor 里的代码不要再套一层边框 */
 .lesson .syo-editor pre { margin: 0; border: 0; background: none; padding: 0; }
 
+/* ::: code（围栏的字段版）：外框归 .lesson-code，里面的 pre 不再自带框；
+   caption 是框内那句解释，贴在代码下方（不编号，字号与图注一致） */
+.lesson-code {
+  margin: var(--syo-space-4) 0;
+  background: var(--syo-bg-surface);
+  border: 1px solid var(--syo-border);
+  border-radius: var(--syo-radius-md);
+  overflow: hidden;
+}
+.lesson .lesson-code pre,
+.lesson .lesson-code .code-toolbar > pre {
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+}
+.lesson-code .code-toolbar { margin: 0; }
+.lesson-code__caption {
+  margin: 0;
+  padding: var(--syo-space-2) var(--syo-space-4) var(--syo-space-3);
+  border-top: 1px solid var(--syo-border);
+  font-size: .8125rem;
+  line-height: 1.6;
+  color: var(--syo-fg-muted);
+}
+
 .lesson table {
   width: 100%;
   margin: var(--syo-space-4) 0;

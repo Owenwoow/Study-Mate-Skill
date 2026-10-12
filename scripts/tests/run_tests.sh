@@ -27,7 +27,7 @@ step '题目属性转义（检查，9 例）'          python3 scripts/tests/tes
 step '题目里的代码围栏（检查，12 例）'     python3 scripts/tests/test_quiz_code.py
 step '课件配图（检查，5 例）'              python3 scripts/tests/test_lesson_figure.py
 step '命名与上下节课指针（检查，9 例）'    python3 scripts/tests/test_naming_nav.py
-step '图片库索引（校验器，6 例）'            python3 scripts/tests/test_pool.py
+step '图片库索引与文件头（校验器，10 例）'            python3 scripts/tests/test_pool.py
 step '位次重排与 empty_reason（脚本，22 例）'  python3 scripts/tests/test_lesson_scripts.py
 step '课件渲染（渲染器，26 例）'           python3 scripts/tests/test_render_lesson.py
 step '附件 Markdown 渲染（29 项）'         python3 scripts/tests/test_attachment_render.py

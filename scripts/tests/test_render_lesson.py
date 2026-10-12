@@ -757,6 +757,61 @@ def _(a):
 
 
 # ══════════════════════════════════════════════════════════════════
+# ⑫b ::: code：围栏的字段版（框内解释槽）
+# ══════════════════════════════════════════════════════════════════
+
+@case('::: code：alt 落成 role=group、caption 框内不编号、原文逐字（含像字段的行与 :::）')
+def _(a):
+    subject = new_subject()
+    fixtures.write_content(subject, 1, 'overview-map', body='''## 跑一遍
+
+::: code term
+alt: 终端里跑一遍，看两个绑定各是什么
+caption: 提示符写 `> `，输出原样贴
+
+> node -e "console.log(a, b)"
+1 2
+caption: 这一行在原文中间，照收
+:::
+''')
+    code, out, text, path = render(subject, 1, 'overview-map')
+    a.equal('渲染退出码 0', code, 0)
+    a.has(text,
+          '<div class="lesson-code" role="group" aria-label="终端里跑一遍，看两个绑定各是什么">',
+          '<pre data-lang="term"><code>&gt; node -e "console.log(a, b)"\n1 2\n'
+          'caption: 这一行在原文中间，照收</code></pre>',
+          '<p class="lesson-code__caption">提示符写 <code>&gt; </code>，输出原样贴</p>')
+    a.ok('caption 不编号（代码块不占图号）', '图 1' not in text)
+    a.ok('代码块不冒充 role="img"', 'role="img"' not in text)
+
+    # 不写语言、不写字段：只产 lesson-code + 不带 data-lang 的 pre
+    subject2 = new_subject()
+    fixtures.write_content(subject2, 1, 'overview-map',
+                           body='## 看\n\n::: code\nprint(1)\n:::\n')
+    code2, out2, text2, path2 = render(subject2, 1, 'overview-map')
+    a.equal('不写语言放行', code2, 0)
+    a.has(text2, '<div class="lesson-code">\n', '<pre><code>print(1)</code></pre>')
+
+
+@case('::: code：code-lang / code-field / code-body 都带行号报错')
+def _(a):
+    bad = [
+        ('::: code python extra\nx = 1\n:::\n', 'code-lang', '只写一个语言标签'),
+        ('::: code term caption: 说明\n> pwd\n:::\n', 'code-lang', '单独两行'),
+        ('::: code cobol\nx\n:::\n', 'code-lang', '不认识的语言标签'),
+        ('::: code term\ncaption:\n> pwd\n:::\n', 'code-field', '没写内容'),
+        ('::: code term\ncaption: 只写了槽\n:::\n', 'code-body', '没有代码原文'),
+    ]
+    for body, code_id, needle in bad:
+        subject = new_subject()
+        md = fixtures.write_content(subject, 1, 'overview-map', body='## 看\n\n' + body)
+        code, out, text, path = render(subject, 1, 'overview-map')
+        a.ok(f'{code_id}（{needle}）非零退出', code != 0, f'exit={code}')
+        a.has(out, f'[{code_id}]', needle, label=f'{code_id} 报错说清原因')
+        a.has(out, f'{md}:', label=f'{code_id} 报错带文件与行号')
+
+
+# ══════════════════════════════════════════════════════════════════
 # ⑬ 内联 SVG：原样透传
 # ══════════════════════════════════════════════════════════════════
 

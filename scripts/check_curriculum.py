@@ -16,6 +16,7 @@
 （本脚本由课程设计角色在一次实测会话里写出，经总控复核后收编：只读、无副作用。）
 """
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -33,6 +34,57 @@ SCHEMA_PATH = ROOT / "schemas" / "curriculum.schema.json"
 
 sys.path.insert(0, str(ROOT / "scripts"))
 import statuses  # noqa: E402  旧六档 → 三档的映射只有一份
+
+
+RESOURCE_SECTIONS = ("## Knowledge", "## 易变内容的官方核对来源")   # 只有这两节是知识来源
+SERVES_RE = re.compile(r"·\s*服务\s+(.+?)\s*$")
+
+
+def resource_coverage(resources_path, node_ids):
+    """RESOURCES.md 对大纲节点的覆盖率 → 提示列表（不阻断）。
+
+    每条知识来源在行末写 `· 服务 <节点 id>`（多条用「、」分隔）；社区与 Gaps 不算。
+    报三件事：指不出一处来源的节点、条数超过节点数 × 2、标记里写了大纲里没有的节点 id。
+    """
+    if not resources_path.is_file() or not node_ids:
+        return []
+    try:
+        lines = resources_path.read_text(encoding="utf-8").splitlines()
+    except (OSError, UnicodeError):
+        return [f"{resources_path.name} 读不出来，跳过资源覆盖率"]
+    section, entries, served, unknown = None, 0, set(), set()
+    for line in lines:
+        if line.startswith("## "):
+            section = line.strip()
+            continue
+        if section not in RESOURCE_SECTIONS or not re.match(r"^\s*- \[", line):
+            continue
+        entries += 1
+        match = SERVES_RE.search(line)
+        if not match:
+            continue
+        for node_id in re.split(r"[、,，]\s*", match.group(1)):
+            node_id = node_id.strip()
+            if node_id in node_ids:
+                served.add(node_id)
+            elif node_id:
+                unknown.add(node_id)
+    notes = []
+    if entries and not served:
+        notes.append(f"{resources_path.name} 的 {entries} 条来源都还没标 `· 服务 <节点 id>`"
+                     "（按课设的「资源 ↔ 节点对照」补上，才算得出覆盖率）")
+        return notes
+    missing = [n for n in node_ids if n not in served]
+    if missing:
+        sample = "、".join(missing[:5]) + ("…" if len(missing) > 5 else "")
+        notes.append(f"还有 {len(missing)} 个节点在 {resources_path.name} 里指不出一处来源：{sample}"
+                     "（稳定基础知识可以不凑；易变内容要补收集）")
+    if entries > 2 * len(node_ids):
+        notes.append(f"{resources_path.name} 有 {entries} 条来源，超过节点数 × 2（{len(node_ids)} × 2）"
+                     "——每条都该服务到节点，别拿条目充长度")
+    if unknown:
+        notes.append(f"「服务」标记里有大纲里没有的节点 id：{'、'.join(sorted(unknown))}")
+    return notes
 
 
 def normalized_for_schema(data):
@@ -227,6 +279,11 @@ def main(argv: list[str]) -> int:
         orphans = [i for i in ids if i not in referenced]
         if orphans:
             print(f"  [提示] 没有被任何节点依赖的末端节点: {', '.join(orphans)}")
+
+        # 资源清单覆盖率（只提示）：同目录有 RESOURCES.md 才查
+        node_ids = [n.get("id") for n in nodes if isinstance(n, dict) and isinstance(n.get("id"), str)]
+        for note in resource_coverage(path.parent / "RESOURCES.md", node_ids):
+            print(f"  [提示] {note}")
 
         if errors:
             failed = True

@@ -72,6 +72,7 @@ description: 课程设计角色：根据总控提供的盘问结果与 `resource
 
 - **大纲**：按最终路径落成 `<subject_path>/.stage/curriculum-designer-<slug>/deliver/curriculum.yaml`
 - **报告**：一段简短变更说明（改了什么、为什么、影响哪些节点 + **实验课怎么插、各验收哪些节点** + 三条线索怎么落）；顺带报告发现的元数据问题（"这条资源失效了""目标层级可能要上调""课程用词与术语表冲突"）与**还缺哪些依据（要总控补收集）**——**报告即可，改动由总控做**
+- **资源 ↔ 节点对照**：报告里给一张短表——`RESOURCES.md` 里每条知识来源（`## Knowledge` 与 `## 易变内容的官方核对来源` 两节）服务哪几个节点 id；总控据此给清单补 `· 服务 <节点 id>` 标记。指不出一处来源的节点也列出来（那是要补收集的地方）
 - **交付时报出规模**：节点数、`kind` 分布、边数，以及校验器 PASS 的原文输出——总控据此复算后才会落盘（只给一个文件路径、不说规模，盘上内容被换掉了也看不出来）
 - **机器交接**：最后在 `<subject_path>/.stage/curriculum-designer-<slug>/handoff.json` 写 manifest（唯一口径见 `<root>/references/Agent交接协议.md`）：`outputs` 声明 `curriculum.yaml`，`checks` 记录本轮真实执行的 `check_curriculum.py` 结果；只有检查通过才写 `status: succeeded`
 

@@ -71,7 +71,7 @@ MATH_PAIR_RE = re.compile(r'\$[^\s$][^$\n]*[^\s$]\$|\$[^\s$]\$')
 # 旧课件里手写的「图 N ·」会被剥掉重编——所以重渲染是幂等的，老写法不改也不会重号。
 CAPTION_NUMBER_RE = re.compile(r'^图\s*\d+\s*·\s*')
 
-DIRECTIVES = ('practice', 'quiz', 'figure', 'svg', 'tip', 'warn', 'note', 'resources', 'related')
+DIRECTIVES = ('practice', 'quiz', 'figure', 'svg', 'code', 'tip', 'warn', 'note', 'resources', 'related')
 CONTAINER_DIRECTIVES = ('practice', 'tip', 'warn', 'note')          # 块里还能写普通块
 CARD_CLASS = {'tip': 'lesson-tip', 'warn': 'lesson-warn', 'note': 'lesson-note'}
 
@@ -597,7 +597,7 @@ def parse_directive(path, lines, index, end, problems):
     if not known:
         return None, next_index
 
-    if name != 'quiz':
+    if name not in ('quiz', 'code'):                    # ::: code 的块内是代码原文，逐字照收
         reject_stray_empty_reason(path, name, lines, index + 1, body_end, problems)
 
     if name in CONTAINER_DIRECTIVES:
@@ -612,6 +612,8 @@ def parse_directive(path, lines, index, end, problems):
         return build_figure(path, args, lines, index + 1, body_end, line_no, problems), next_index
     if name == 'svg':
         return build_svg(path, args, lines, index + 1, body_end, line_no, problems), next_index
+    if name == 'code':
+        return build_code(path, args, lines, index + 1, body_end, line_no, problems), next_index
     return build_links(path, name, lines, index + 1, body_end, line_no, problems), next_index
 
 
@@ -733,6 +735,53 @@ def build_svg(path, args, lines, start, end, line_no, problems):
                                     '否则页面结构会从这里断掉；自闭合的 <svg/> 也算收尾）')
     return {'kind': 'directive', 'name': 'svg', 'alt': fields.get('alt', ''),
             'caption': fields.get('caption', ''), 'raw': '\n'.join(raw), 'line': line_no,
+            'alt_line': field_lines.get('alt', line_no),
+            'caption_line': field_lines.get('caption', line_no)}
+
+
+def build_code(path, args, lines, start, end, line_no, problems):
+    """`::: code [语言]` + 可选 `alt:`/`caption:` + 代码原文（逐字保留）——围栏的「字段版」。
+
+    语言标签与围栏同一张表；字段只在原文之前、各占一行（照 `::: svg` 的先例）。原文一开始，
+    长得像字段的行就是原文本身。错误码：code-lang（参数）/ code-field（字段没值）/ code-body（没原文）。
+    """
+    language = args
+    if any(token in args for token in ('alt:', 'caption:', 'alt：', 'caption：')):
+        problems.add(path, line_no, '[code-lang] 字段写在指令头了：alt: / caption: 要写在块里的单独两行'
+                                    '（指令头只写一个语言标签，可省）')
+        language = ''
+    elif len(args.split()) > 1:
+        problems.add(path, line_no, f'[code-lang] ::: code 后面只写一个语言标签（现在是「{args}」）')
+        language = ''
+    elif args and not lessonfmt.is_known_lang(args):
+        problems.add(path, line_no,
+                     f'[code-lang] 不认识的语言标签 `{args}`——与围栏同一张表：会着色的写 '
+                     f'{" / ".join(lessonfmt.COLORED_LANGS)}；不上色写 text'
+                     f'（{" / ".join(lessonfmt.PLAIN_LANGS[1:])} 也认），或者不写')
+        language = ''
+    fields, field_lines, body = {}, {}, None
+    for offset in range(start, end):
+        raw_line = lines[offset]
+        if body is None:
+            text = raw_line.strip()
+            if not text:
+                continue
+            field = FIELD_RE.match(text)
+            if field and field.group(1) in ('alt', 'caption'):
+                value = field.group(2).strip()
+                if not value:
+                    problems.add(path, offset + 1, f'[code-field] {field.group(1)}: 后面没写内容'
+                                                   '（写一句，或把这一行删掉）')
+                fields[field.group(1)] = value
+                field_lines[field.group(1)] = offset + 1
+                continue
+            body = []
+        body.append(raw_line)
+    if not body:
+        problems.add(path, line_no, '[code-body] ::: code 块里只有字段、没有代码原文（只写字段等于留了个空框）')
+        body = []
+    return {'kind': 'directive', 'name': 'code', 'lang': language, 'text': '\n'.join(body),
+            'alt': fields.get('alt', ''), 'caption': fields.get('caption', ''), 'line': line_no,
             'alt_line': field_lines.get('alt', line_no),
             'caption_line': field_lines.get('caption', line_no)}
 
@@ -1032,6 +1081,8 @@ class Renderer:
             return self.render_figure(block, indent)
         if name == 'svg':
             return self.render_svg(block, indent)
+        if name == 'code':
+            return self.render_code(block, indent)
         if name in ('resources', 'related'):
             return self.render_links(block, indent)
         # 兜底：与 render_block 同理——认不出的指令**报错**，不做静默空输出
@@ -1114,6 +1165,24 @@ class Renderer:
                          f'{self.inline(caption, block.get("caption_line", block["line"]))}'
                          f'</figcaption>')
         lines.append(f'{indent}</figure>')
+        return '\n'.join(lines)
+
+    def render_code(self, block, indent):
+        """`::: code` → div.lesson-code（写了 alt: 才带 role=group + aria-label）> pre + 可选框内解释。
+
+        代码块不是图：不冒充 role="img"，caption 也**不编号**（图注编号只给图）。
+        """
+        attr = ''
+        if block['alt']:
+            self.check_inline_html(block['alt'], block.get('alt_line', block['line']), '::: code 的 alt:')
+            attr = f' role="group" aria-label="{pagetpl.esc(block["alt"], attr=True)}"'
+        lang = f' data-lang="{pagetpl.esc(block["lang"], attr=True)}"' if block['lang'] else ''
+        lines = [f'{indent}<div class="lesson-code"{attr}>',
+                 f'{indent}  <pre{lang}><code>{pagetpl.esc(block["text"])}</code></pre>']
+        if block['caption']:
+            lines.append(f'{indent}  <p class="lesson-code__caption">'
+                         f'{self.inline(block["caption"], block.get("caption_line", block["line"]))}</p>')
+        lines.append(f'{indent}</div>')
         return '\n'.join(lines)
 
     def render_links(self, block, indent):
