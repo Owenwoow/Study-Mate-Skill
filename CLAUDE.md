@@ -1,13 +1,13 @@
 # study-mate-skill（引擎开发仓库）
 
 在本目录开的会话 = **改 skill 引擎**：SKILL.md、角色/协议规格、脚本、模板、前端资源（Sayo / Prism / 样式与交互）。
-上级目录 `E:\Project\AI_drive_learning\CLAUDE.md` 也会被读到：它的语言、命令格式、git 禁令照样适用；
+上级目录 `E:\Code\AI_drive_learning\CLAUDE.md` 也会被读到：它的语言、命令格式、git 禁令照样适用；
 但其中「在本目录开会话只做学习」说的是主项目目录，**不适用于这里**——本文件与它冲突时以本文件为准。
 
 ## 两个仓库
 
 - **本仓库**（`.claude/skills/study-mate-skill/`）：独立 git 仓库，只放引擎；主仓库的 `.gitignore` 忽略本目录
-- **主仓库**（`E:\Project\AI_drive_learning`）：学习内容，`workspace/` 下的科目、课件、题库、lab、进度
+- **主仓库**（`E:\Code\AI_drive_learning`）：学习内容，`workspace/` 下的科目、课件、题库、lab、进度
 - 这里的会话**不做学习**（不讲课、不出课件、不改进度）；要学习回主目录开会话
 
 ## 改动规则
