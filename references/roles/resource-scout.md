@@ -41,6 +41,8 @@ description: 资料收集角色：按科目目标与盘问结果检索权威教�
 
 **正文只报摘要**（别贴清单全文）：条数与两类各几条、`Gaps` 条数、落盘路径，再加 3-5 条"最该先看的"与一句"哪些站点抓不动"（下游 `image-scout` 靠这句省时间）。
 
+**机器交接**：这次 `.stage/.../deliver/` 里的清单写完后，在同一 stage 根最后写 `handoff.json`（结构与状态语义见 `<root>/references/Agent交接协议.md`）。`outputs` 至少声明 `RESOURCES.md`；直接落在正式 `reference/`／`sources/` 的两个既有例外不塞进 `outputs`，也不为 handoff 改它们的落点。没有独立机器检查时 `checks` 可以是 `[]`，不要把没跑的检查写成 `passed`。
+
 ## 边界
 
 - **不设计 DAG**：节点顺序、深度、`kind` 与实验课归 `curriculum-designer`，你只给依据

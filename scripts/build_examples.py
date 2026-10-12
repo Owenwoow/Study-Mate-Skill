@@ -45,10 +45,10 @@ def main(argv):
         subject_dir = os.path.join(subjects_dir, slug)
         if not os.path.isdir(subject_dir):
             continue
-        # 课件层组件每个科目一份：本地 examples 的科目没有课件内容文件也要拷齐（渲染那步不会补）
-        problems = lessonfile.install_subject(subject_dir)
-        if problems:
-            raise SystemExit(problems[0])
+        asset_problems = lessonfile.install_subject(subject_dir)
+        if asset_problems:
+            print('\n'.join(asset_problems), file=sys.stderr)
+            return 1
         outline, _ = curriculum.load(subject_dir, strict=False)
         if outline is None:
             print(f'{slug}: 没有可读的 curriculum.yaml，跳过它的课件', file=sys.stderr)

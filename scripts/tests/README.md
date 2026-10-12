@@ -1,8 +1,8 @@
 # 回归测试
 
 ```bash
-bash scripts/tests/run_tests.sh              # 18 套快测（纯 Python/Node）
-bash scripts/tests/run_tests.sh --browser    # 再加需要 google-chrome 的 3 套（共 21 套）
+bash scripts/tests/run_tests.sh              # 19 套快测（纯 Python/Node）
+bash scripts/tests/run_tests.sh --browser    # 再加需要 google-chrome 的 3 套（共 22 套）
 ```
 
 只依赖 `python3` + `pyyaml`（跑检查要用）与 `node`（两套 DOM 测试）；没有 node 会自动跳过那两套。
@@ -26,6 +26,7 @@ bash scripts/tests/run_tests.sh --browser    # 再加需要 google-chrome 的 3 
 | `test_lessonfmt.py` | `lessonfmt.py`：内容格式的围栏判定——语言标签白名单、写错标签带行号报错 |
 | `test_statuses.py` | `statuses.py`：状态与课型词表从 `schemas/` 读，脚本与 schema 不漂移 |
 | `test_templates.py` | 模板与规格一致：术语表/使命/共享记忆的分节、`subject.yaml` 键与 schema、围栏白名单与前端配色表相等、`examples/` 副本与模板逐字节一致 |
+| `test_handoff.py` | 角色暂存交接：schema、角色/节点绑定、路径边界、symlink、`deliver/` 全覆盖与 SHA-256 |
 | `test_python_syntax.py` | 全部 `.py` 能编译（含非法转义警告当错误），把这类问题拦在编译期 |
 | `quiz_dom_test.js` | `templates/assets/quiz.js`：选择题判分、开放题展开/收起、坏数据兜底、计分，以及围栏 → `<pre><code>` 的渲染与 `textContent` 语义、异常数据隔离和开头围栏（33 项） |
 | `toc_dom_test.js` | `templates/assets/lesson-toc.js`：侧栏目录、折叠、移动端抽屉、上/下节课指针搬进侧栏、平板默认折叠与展开状态（33 项） |

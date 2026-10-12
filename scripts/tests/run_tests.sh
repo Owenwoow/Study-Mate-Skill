@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # StudyMate 回归测试：纯 Python / Node，不需要浏览器（默认）。
-#   bash scripts/tests/run_tests.sh              # 18 套快测
-#   bash scripts/tests/run_tests.sh --browser    # 再加需要 google-chrome 的 3 套（共 21 套）
+#   bash scripts/tests/run_tests.sh              # 19 套快测
+#   bash scripts/tests/run_tests.sh --browser    # 再加需要 google-chrome 的 3 套（共 22 套）
 set -u
 cd "$(dirname "$0")/../.." || exit 1
 
@@ -37,6 +37,7 @@ step '文件名与资源清单（lessonfile.py）'   python3 scripts/tests/test_
 step '内容格式围栏（lessonfmt.py）'        python3 scripts/tests/test_lessonfmt.py
 step '状态与课型词表（statuses.py）'       python3 scripts/tests/test_statuses.py
 step '模板与规格一致'                      python3 scripts/tests/test_templates.py
+step '角色暂存交接（check_handoff.py）'    python3 scripts/tests/test_handoff.py
 step '全部 .py 能编译'                     python3 scripts/tests/test_python_syntax.py
 
 if command -v node >/dev/null 2>&1; then

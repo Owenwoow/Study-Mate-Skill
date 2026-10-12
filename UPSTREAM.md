@@ -6,7 +6,7 @@
 ## 基线
 
 - 上游仓库：https://github.com/Miaotofu01/Study-Mate（分支 `main`）
-- **基线提交**：`f8a6204`（v0.3.0，2026-09-30）
+- **基线提交**：`452c334`（v1.0.0，2026-10-02）
 - 蒸馏起点：`3d2a31f`（2026-09-24，介于 v0.2.0 与 v0.3.0 之间）
 - 本地安装提交：`20352a2`（2026-09-25）
 
@@ -41,6 +41,10 @@
 | 工作区读 `~/.dsh/studymate-config.yaml` / `STUDYMATE_*` 环境变量 | 本地用三级定位（见定制清单） | 2026-10-12 |
 | Codex/ChatGPT、Antigravity 插件，npm 安装器与发布、CI、`interaction_state.py` | 宿主/发布专属 | 2026-10-12 |
 | 提示词改用「代称」+ `docs/文件归属.md` 索引 | 本地规格一直直接写真实文件名，单个 skill 用不着再加一层索引 | 2026-10-12 |
+| 引擎脚本一律 `python3 -B`（v1.0） | 为 DSH 只读引擎目录准备；本地引擎目录可写、`__pycache__/` 已忽略 |  2026-10-12 |
+| 派工值从总控的映射表搬进各角色规格「输入」节（bce408d） | 纯结构重构；本地保留总控里的值映射表 | 2026-10-12 |
+| 提示词规则归属声明表 `rule-owners.json` + `test_skill_rules.py`、技能调用面 frontmatter（`disable-model-invocation` 等）与其测试、`check_skill.py` 的调用面检查、`工程约束 §四` 参数形态契约测试 | 针对上游 12 个 SKILL.md 的结构；本地是 1 个入口 + 参考规格，由 `test_package.py` 守 | 2026-10-12 |
+| `docs/` 按用途分 `使用/规范/设计/adr/agents`、AGENTS.md、GLOSSARY.md、贡献契约、issue 模板 | 上游开源协作用；本地文档都在 `references/` | 2026-10-12 |
 | 示例科目（线性代数、计算机网络）整套重跑 | 本地 examples 是删减过的示意，只同步共享层副本 | 2026-10-12 |
 
 （后续批次要核实的：ADR-0002 引擎改用 TypeScript、ADR-0003 阅读端只嵌 DSH、ADR-0005 静态页面降为导出——本地仍是 Python 脚本 + 静态 HTML 课件。）
@@ -51,3 +55,4 @@
 |---|---|---|---|---|
 | 2026-10-12 | —（建立基线 `3d2a31f`） | — | — | — |
 | 2026-10-12 | `3d2a31f..v0.3.0`（51 提交） | 检查项 10 本地引用可达；图注编号交渲染器；主页未生成不拦课件；Py3.12+ 非法转义；围栏语言白名单；KaTeX 公式排版（课件 + 题库）；学习方向探索协议；讲解先读来源原文、讲法以来源为准、教科书语体兜底；去掉强制中英对照；配图不指定画法；本地教材 → `reference/`、在线来源 → `sources/`；角色草稿 `/tmp` → `.stage/`；等子代理不轮询；脚本重构（curriculum/lessonfile/lessonfmt/statuses/pagetpl）+ 共享清单单源；术语表模板「待掌握/已掌握」；`build_examples.py`；新增 7 套测试 | 见「故意不跟的方向」 | 3 套浏览器测试本机没有 google-chrome，未跑 |
+| 2026-10-12 | `v0.3.0..v1.0.0`（20 提交） | 角色暂存交接门禁（`handoff.json` + `check_handoff.py` + `agent-handoff.schema.json` + `references/Agent交接协议.md`，三个 staged 角色交稿最后写 manifest、总控搬入前先验）；题目数据异常导致后续题组不显示（quiz.js）；使命新增 `## Out of scope`；image-scout 不用系统临时目录；脚本若干修复（大纲校验、渲染器、主页生成、附件渲染）；`test_templates` 补「使命四节」「共享记忆条目有家」；新增 `test_handoff.py` | 见「故意不跟的方向」（-B、派工值重构、规则归属/调用面测试、docs 重组；VitePress 阅读端提案留到 v1.1 一起评估） | 浏览器测试同上 |

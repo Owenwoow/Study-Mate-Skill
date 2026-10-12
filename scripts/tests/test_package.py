@@ -5,7 +5,7 @@
 原版钉的是 11 个 `SKILL.md` 里的 417 条措辞；通用版只有 1 个入口 + 11 份参考规格，
 所以这里钉三类东西——
 
-  ① 包结构：入口、5 个角色、6 个协议、4 份约束文档、5 份 schema、15 个脚本、模板齐全；
+  ① 包结构：入口、5 个角色、6 个协议、4 份约束文档、6 份 schema、16 个脚本、模板齐全；
   ② 规则在位：SKILL.md 里承载可执行规则的片段（阈值、字段名、文件名、命令、时机、禁止项）
      逐条必须在（压缩/改写时不许丢规则）；
   ③ 一致性与洁净：SKILL.md 提到的每个 `references/*.md` 与 `scripts/*.py` 都真实存在；
@@ -23,13 +23,13 @@ ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)
 ROLES = ('resource-scout', 'image-scout', 'curriculum-designer', 'learning-coach', 'practice-evaluator')
 PROTOCOLS = ('learning-discovery', 'lesson-design', 'layered-practice', 'evidence-check', 'local-qa',
              'record-keeping')
-DOCS = ('课件内容格式.md', '工程约束.md', '使用说明.md', '设计方案.md', '安装与迁移.md')
+DOCS = ('课件内容格式.md', '工程约束.md', '使用说明.md', '设计方案.md', '安装与迁移.md', 'Agent交接协议.md')
 SCHEMAS = ('curriculum.schema.json', 'progress.schema.json', 'assessment.schema.json',
-           'session-summary.schema.json', 'subject.schema.json')
+           'session-summary.schema.json', 'subject.schema.json', 'agent-handoff.schema.json')
 SCRIPTS = ('gen_home.py', 'render_lesson.py', 'check_lesson.py', 'check_curriculum.py',
            'check_pool.py', 'check_skill.py', 'preview_templates.py',
            'apply_empty_reasons.py', 'renumber_lessons.py', 'build_examples.py',
-           'curriculum.py', 'lessonfile.py', 'lessonfmt.py', 'pagetpl.py', 'statuses.py')
+           'curriculum.py', 'lessonfile.py', 'lessonfmt.py', 'pagetpl.py', 'statuses.py', 'check_handoff.py')
 TEMPLATES = ('lesson.html', 'home-index.html', 'subject-index.html',
              'MEMORY.md', 'MISSION.md', 'RESOURCES.md', 'GLOSSARY.md', 'subject.yaml')
 

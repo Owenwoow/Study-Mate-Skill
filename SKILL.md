@@ -44,7 +44,7 @@ license: MIT
 3. **已有科目**：把科目清单摆给学生选项（科目名 + 状态 + 上次学习日期 + 当前节点），或让他报新科目名。
 4. **新科目** → 你亲自走「新科目盘问」，盘完按这个顺序落地：
    1. 建科目文件夹（含 `assessments/`；`lab/` 不预建，见 `record-keeping`）
-   2. 写 `MISSION.md`（`## Why` 与 `## Success looks like` 来自盘问第一问；`## Constraints` 收前置基础、时间投入与偏好）与 `subject.yaml` 的 `goal`
+   2. 写 `MISSION.md`（`## Why` 与 `## Success looks like` 来自盘问第一问；`## Constraints` 收前置基础、时间投入与偏好；`## Out of scope` 收明确不学的范围）与 `subject.yaml` 的 `goal`
    3. 派 `resource-scout` 收集资料（值：`subject_path` + 盘问结果摘要 +（可选）本地资料路径 +（可选）可用的转换工具）：**派发前主动问学生有没有准备好的本地教材或讲义路径**（留空则全网检索）；有本地资料就先看清格式，要转换工具（PDF／Word／PPT 转 Markdown）就先问过学生、装好再派。它把清单草稿落到 `<subject_path>/.stage/resource-scout-<slug>/deliver/RESOURCES.md`——你 `cp` 到科目（同一条命令里删掉 `.stage/`）、扫一眼条数与来源域名；本地教材它直接转进 `reference/`，在线来源原文转进 `sources/`。**建池与拟大纲并行**——`RESOURCES.md` 落位后，同时派下面两个（别串着等）：
       ```
       派 resource-scout → cp 落 RESOURCES.md → 写 GLOSSARY.md（## 待掌握 装 5-15 个主题词，写明用日文原词还是中文）→ 同时派两个：
@@ -182,6 +182,7 @@ license: MIT
 
 - **上游产出给路径，不转述**：锚点在内容文件、`objective` 在大纲、题目在 `.quiz.json`、资源在 `RESOURCES.md`——派工时给**绝对路径 + 节点 id**，让下游自己读；**别贴全文、也别凭记忆转述**（只有你自己生成的摘要——盘问结果、前置节点摘要——才写进 brief）
 - **搬运用 shell，不转抄**：产物由产出者落 `<subject_path>/.stage/<角色>-<节点id>/deliver/`，你只做三件事——`cp` 搬到位、跑校验器（`check_curriculum.py`／`check_pool.py`／`render_lesson.py`／`check_lesson.py`）、读角色给的**摘要**。**一份产物只该经过它的作者的手**
+- **暂存交接先验 manifest**：凡角色走 `deliver/` 交付（`resource-scout`、`curriculum-designer`、`practice-evaluator`），任一 `cp`／合并之前先跑 `python3 <root>/scripts/check_handoff.py '<stage_dir>' --role '<角色>' [--node '<节点id>']`；非零就**不搬、不删 stage**，把原始错误打回同一个角色（口径见 `<root>/references/Agent交接协议.md`；它只验交接边界，不替代领域校验）
 - **长产出走暂存目录**：成套文件（lab、实验说明页）让角色按**最终相对路径**先落到 `<subject_path>/.stage/<角色>-<节点id>/deliver/`、正文只给文件清单，你 `cp`／`cp -r` 原样搬进正式位置（同一条命令里删掉 `.stage/`）——**别读进上下文再写出来**（一份题库 15 KB、一套 lab 20 KB、一份大纲 46 KB，读一遍写一遍就是几万字符的纯搬运），也别指望回复正文传文件内容（长正文会被压缩掉）；草稿路径一律在 prompt 里写死 `<subject_path>/.stage/<角色>-<节点id或slug>/`，**不许给 `.stage/` 根这类共用固定路径**（后写的会盖掉先写的）；**不用 `/tmp` 中转**——文件工具与 shell 看到的 `/tmp` 未必是同一个目录
 - **对位靠锚点，不靠序号**：`::: quiz` 的锚点文本是内容文件与题库之间的唯一接头——讲解写、出题人自己从内容文件的 `::: quiz` 行读（**你不转述**）、渲染器按它取题；序号对位在不一致时会**静默错位**
 - **「位 ↔ 题」交给检查，你别手工核**：锚点无题缺 `empty_reason:`、题库孤儿键、同一锚点两个题目位置——这三类对账都是 `render_lesson.py`／`check_lesson.py` 带行号的确定性报错，逐个手比是重复劳动；报错时按归属打回（内容 → `learning-coach`，题库与锚点 → `practice-evaluator`）
@@ -204,6 +205,7 @@ license: MIT
 | `check_lesson.py <页面> --subject <科目目录> --node <节点id>` | 课件检查：版式、配图、题目结构、命名与上下节课指针、lab 齐全性 |
 | `check_curriculum.py <curriculum.yaml> ...` | 大纲校验：schema、重复 id、悬空引用、环、孤儿节点、实验课必须有 prerequisites |
 | `check_pool.py <subject_path>` | 图片库校验：索引七列、命名合规、来源/许可非空、单张 ≤500 KB |
+| `check_handoff.py <stage_dir> --role <角色> [--node <节点id>]` | 角色暂存交接门禁：`handoff.json` ↔ `deliver/` 覆盖、角色/节点、路径边界、symlink |
 | `check_skill.py [<路径> ...]` | 校验本技能包文档的 frontmatter（改过 SKILL.md 或角色/协议规格就跑一次） |
 | `preview_templates.py [--open]` | 用假数据把主页模板渲到 `<root>/.preview/`，只看样式与交互 |
 | `apply_empty_reasons.py <subject_path> <节点id> <tsv>` | 把无题锚点的理由打进内容文件 |
