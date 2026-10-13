@@ -1,5 +1,0 @@
-# StudyMate 学习工作区定位。
-# 相对路径按本技能包目录(<root>)解析;也可以写绝对路径。
-# 优先级低于环境变量 LEARN_WORKSPACE,高于默认值 <root>/workspace。
-# 这里指向项目根目录的 workspace/,让学习记录随项目一起进版本库。
-workspace: ../../../workspace

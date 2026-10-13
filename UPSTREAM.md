@@ -1,7 +1,7 @@
 # 上游同步状态
 
 本包从 [Miaotofu01/Study-Mate](https://github.com/Miaotofu01/Study-Mate) 蒸馏而来（去宿主化的通用 skill）。
-同步流程见主仓库 `.claude/skills/study-mate-sync/SKILL.md`；本文件是它的状态：开工先读，收工必更新。
+同步流程见本仓库 `.claude/skills/study-mate-sync/SKILL.md`；本文件是它的状态：开工先读，收工必更新。
 
 ## 基线
 
@@ -19,7 +19,8 @@
 
 | 定制 | 涉及文件 | 来源提交 |
 |---|---|---|
-| 工作区指向主仓库根目录 `workspace/` | `studymate.config.yaml` | `20352a2` |
+| 工作区定位：本机配置 `studymate.config.yaml` 不入库（本机指向学习项目 `E:/Code/AI_drive_learning/workspace`），仓库只放 `studymate.config.example.yaml` | `studymate.config.example.yaml`、`.gitignore` | `20352a2`，2026-10-13 拆仓 |
+| 仓库独立：从学习项目的 `.claude/skills/` 搬到 `E:\Code\Study-Mate-Skill`、公开到 GitHub `Owenwoow/Study-Mate-Skill`；学习项目用目录联接引用 | `README.md`、`CLAUDE.md`、`.claude/skills/study-mate-sync/` | 2026-10-13 |
 | 课件代码块用 PrismJS 上色 + VitePress 式语言角标、图标复制按钮（上游的自研正则高亮只作 Prism 未加载时的退路） | `templates/lesson.html`、`templates/assets/prism/`、`templates/assets/learn-theme.{css,js}`、`templates/assets/README.md`、`scripts/lessonfile.py` 的 `SHARED_DIRS`（含 `prism`）、`scripts/tests/fixtures.py` 的 `SHARED_STUBS`、`references/工程约束.md` | `c16c57a` |
 | 工作区三级定位（`LEARN_WORKSPACE` → `studymate.config.yaml` → `<root>/workspace`）；上游改成读 DSH 配置，不跟 | `scripts/gen_home.py` 的 `learn_workspace()` 与 `main()` | 蒸馏时 |
 | 测试入口用本地 `run_tests.sh` 逐套列出（上游改成 `npm test`）；结构闸门 `test_package.py` 是本地独有 | `scripts/tests/run_tests.sh`、`scripts/tests/test_package.py`、`scripts/tests/README.md` | 蒸馏时 |

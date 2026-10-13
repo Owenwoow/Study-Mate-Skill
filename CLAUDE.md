@@ -1,14 +1,13 @@
 # study-mate-skill（引擎开发仓库）
 
-在本目录开的会话 = **改 skill 引擎**：SKILL.md、角色/协议规格、脚本、模板、前端资源（Sayo / Prism / 样式与交互）。
-主仓库的 `CLAUDE.md`（本目录往上三级：`../../../CLAUDE.md`） 也会被读到：它的语言、命令格式、git 禁令照样适用；
-但其中「在本目录开会话只做学习」说的是主项目目录，**不适用于这里**——本文件与它冲突时以本文件为准。
+在本目录开的会话 = **改 skill 引擎**：SKILL.md、角色/协议规格、脚本、模板、前端资源（Sayo / Prism / 样式与交互），以及从上游同步（`.claude/skills/study-mate-sync/`）。
 
-## 两个仓库
+## 仓库与学习项目
 
-- **本仓库**（`.claude/skills/study-mate-skill/`）：独立 git 仓库，只放引擎；主仓库的 `.gitignore` 忽略本目录
-- **主仓库**（本目录往上三级 `../../../`，即项目根目录）：学习内容，`workspace/` 下的科目、课件、题库、lab、进度
-- 这里的会话**不做学习**（不讲课、不出课件、不改进度）；要学习回主目录开会话
+- **本仓库**（`E:\Code\Study-Mate-Skill`，GitHub `Owenwoow/Study-Mate-Skill`）：只放引擎，**不放任何学习内容**
+- **学习项目**：本机 `studymate.config.yaml`（不入库）的 `workspace:` 指向的那个项目——现在是 `E:\Code\AI_drive_learning` 的 `workspace/`。学习项目通过目录联接使用本仓库：它的 `.claude/skills/study-mate-skill` → 本仓库，`.claude/skills/study-mate-sync` → 本仓库的 `.claude/skills/study-mate-sync`
+- 用户平时在学习项目的会话里改引擎也行（经联接改的就是本仓库的文件）；提交一律在本仓库做
+- 这里的会话**不做学习**（不讲课、不出课件、不改进度）
 
 ## 改动规则
 
@@ -23,14 +22,14 @@
 
 引擎改完、要让现有课件用上时：
 
-1. 跑 `python scripts/gen_home.py`（把共享资源拷进工作区并刷新主页）；课件层资源（`style.css`/`quiz.js`/`lesson-toc.js`）改了还要拷进各科目 `assets/`；需要时对已有课件跑 `render_lesson.py` 重渲
-2. 这些落在 `workspace/` 里的变化属于**主仓库**：在主仓库单独提交，提交信息写「同步 skill 资源：<改了什么>」
-3. 本仓库的提交与主仓库的提交**绝不合并成一次**
+1. 跑 `python scripts/gen_home.py`（按本机配置把共享资源拷进学习工作区并刷新主页）；课件层资源（`style.css`/`quiz.js`/`lesson-toc.js`）改了还要拷进各科目 `assets/`；需要时对已有课件跑 `render_lesson.py` 重渲
+2. 这些落在学习工作区里的变化属于**学习项目的仓库**：在那边单独提交，提交信息写「同步 skill 资源：<改了什么>」
+3. 本仓库的提交与学习项目的提交**绝不合并成一次**
 
 ## Git（本仓库）
 
 - 直接在 `main` 上提交；每个独立小改动提交一次；提交前 `git status` + `git diff`，只 `git add` 相关文件
 - 提交信息中文，一行说清做了什么，必要时空一行写原因，末尾带 Claude 署名行
-- 不提交：`__pycache__/`、`.preview/`、`workspace/`（本包默认工作区，真实学习数据在主仓库）
+- 不提交：`__pycache__/`、`.preview/`、`workspace/`（本包默认工作区）、`studymate.config.yaml`（本机配置；示例见 `studymate.config.example.yaml`）
 - 禁止：`git push --force`、`git reset --hard`、`git clean -f`、`--amend`/`rebase` 改写已有提交、`--no-verify`
-- 暂无远程仓库，不推送
+- 远程是 GitHub `origin`（公开仓库）：提交后 `git push` 保持同步；**绝不 force**，推送前确认没有本机配置、个人数据混进来

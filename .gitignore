@@ -7,5 +7,8 @@ __pycache__/
 /workspace/*
 !/workspace/.gitkeep
 
+# 本机的工作区配置（示例见 studymate.config.example.yaml）
+studymate.config.yaml
+
 # Claude Code 个人本地配置
 .claude/settings.local.json

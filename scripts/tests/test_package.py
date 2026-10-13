@@ -189,7 +189,8 @@ def main():
         r.ok(f'scripts/{name} 在', os.path.isfile(os.path.join(ROOT, 'scripts', name)))
     for name in TEMPLATES:
         r.ok(f'templates/{name} 在', os.path.isfile(os.path.join(ROOT, 'templates', name)))
-    r.ok('studymate.config.yaml 在', os.path.isfile(os.path.join(ROOT, 'studymate.config.yaml')))
+    r.ok('studymate.config.example.yaml 在（本机的 studymate.config.yaml 不入库）',
+         os.path.isfile(os.path.join(ROOT, 'studymate.config.example.yaml')))
     r.ok('LICENSE 在', os.path.isfile(os.path.join(ROOT, 'LICENSE')))
 
     print('\n② SKILL.md 规则在位')

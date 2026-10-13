@@ -19,7 +19,7 @@ OUT = ROOT / "docs" / "skill-tutorial.html"
 DOCS = [
     ("入口", "SKILL.md", "唯一入口：总控流程（宿主注册的就是它）"),
     ("入口", "README.md", "包说明、安装、与 DSH 原版的差异"),
-    ("入口", "studymate.config.yaml", "工作区定位配置"),
+    ("入口", "studymate.config.example.yaml", "工作区定位配置（示例；本机复制成 studymate.config.yaml）"),
     ("角色规格", "references/roles/resource-scout.md", "找资料"),
     ("角色规格", "references/roles/image-scout.md", "采图"),
     ("角色规格", "references/roles/curriculum-designer.md", "拟大纲与实验课"),
@@ -196,7 +196,7 @@ def fig_invoke() -> str:
     f.arrow("C1", "F1", "e", "w", "加载")
 
     f.box("C2", CX, 140, CW, 58, ["*① 定位 <root> 与工作区", "~读写一律用绝对路径，不用 cwd"], "c", SK, "## 一、开场")
-    f.box("F2", FX, 137, FW, 64, ["env LEARN_WORKSPACE", "→ studymate.config.yaml", "→ <root>/workspace"], "f", "studymate.config.yaml")
+    f.box("F2", FX, 137, FW, 64, ["env LEARN_WORKSPACE", "→ studymate.config.yaml", "→ <root>/workspace"], "f", "studymate.config.example.yaml")
     f.arrow("C1", "C2")
     f.arrow("C2", "F2", "e", "w", "三级定位", "dash")
 
@@ -917,7 +917,7 @@ def main() -> None:
         "%SKILL_TABLE%": d("SKILL.md", "SKILL.md 开头的索引表", "| 路径 |"),
         "%MEMORY%": d("templates/MEMORY.md", "MEMORY.md"),
         "%README_INSTALL%": d("README.md", "README · 安装", "## 安装"),
-        "%CONFIG%": d("studymate.config.yaml"),
+        "%CONFIG%": d("studymate.config.example.yaml"),
         "%LOOP%": d("SKILL.md", "SKILL.md §四 学习循环", "## 四、学习循环"),
         "%DISPATCH%": d("SKILL.md", "SKILL.md §九 角色派发", "### 怎么派"),
         "%DISPATCH9%": d("SKILL.md", "SKILL.md §九", "## 九、角色派发"),

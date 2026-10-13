@@ -1,0 +1,6 @@
+# StudyMate 学习工作区定位（示例）。
+# 用法：复制一份为 studymate.config.yaml（本机配置，已在 .gitignore 里，不入库），改成你的工作区路径。
+# 相对路径按本技能包目录（<root>）解析；也可以写绝对路径。
+# 定位优先级：环境变量 LEARN_WORKSPACE > studymate.config.yaml 的 workspace > 默认 <root>/workspace。
+# 不建这个文件也能用：学习数据就落在本包的 workspace/ 目录里。
+workspace: D:/Learning/workspace

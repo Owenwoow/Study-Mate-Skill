@@ -2,14 +2,16 @@
 
 把「自学一门科目」这件事交给 Agent：**定计划、讲知识、做项目、验收成果**。
 
-这是从 [Study-Mate](https://github.com/Miaotofu01/Study-Mate)（DSH 学习模式预设）整理出来的**通用技能包**——不再绑定任何特定 Agent 框架，任何支持 Agent Skills 约定的宿主都能用。
+> **原项目**：[Miaotofu01/Study-Mate](https://github.com/Miaotofu01/Study-Mate)（MIT，© Cattofu）。
+> 本仓库是它的**蒸馏版**：去掉 DeepSeek Harness（DSH）宿主绑定，整理成一个标准的 Agent Skill（一个目录、一个 `SKILL.md`），Claude Code 等支持 Agent Skills 的宿主都能直接用。
+> 上游的新改动会持续按语义移植过来，当前同步到上游 `63db27a`（v2.0.1 之后），记录见 [`UPSTREAM.md`](UPSTREAM.md)。
 
 ```
-你说「我想学 C++ 打竞赛」
+你说「我想学 Python 写爬虫」
   → 先盘问目的 / 程度 / 前置基础 / 配套项目 / 实操载体
   → 产出知识点路线图（DAG）+ 科目主页
-  → 逐节点产出 HTML 课件（讲解 + 检索练习）+ 引导式实操（lab）
-  → 用可运行证据验收，进度落在文件里、下次会话直接继承
+  → 逐节点产出 HTML 课件（讲解 + 页内练习）+ 引导式实操（lab）
+  → 实验课用可运行证据验收；进度落在文件里，下次会话直接接着学
 ```
 
 ## 它和「直接跟 AI 聊天学」的区别
@@ -19,66 +21,107 @@
 | 直接跟 AI 聊天学 | 会话一长上下文就吃不下；聊完不留痕，下次从零开始 | 状态全部落在文件里；每次会话只带相关记忆、上下文短；课件是教科书式的讲解与配图 |
 | 看视频课 / 网课 | 质量参差不齐；付费；跟不上前沿节奏 | 讲解方式定制化；按需检索最新的资料与标准；完全开源、完全本地 |
 
-## 安装
+## 安装（Claude Code）
 
-**依赖**：Python 3.9+、`pyyaml`。可选：`jsonschema`（大纲 schema 校验，缺了降级为 WARN）、`bash`（跑回归测试）、`node`（跑两套 JS DOM 测试）。
+**依赖**：Python 3.9+ 与 `pyyaml`；可选 `jsonschema`（大纲 schema 校验，缺了降级为提示）、`node`（跑两套 DOM 测试）。
 
 ```bash
-python3 -m pip install pyyaml jsonschema
+python -m pip install pyyaml jsonschema
 ```
 
-**装法**：把**整个目录**（本目录，含 `scripts/`、`templates/`、`schemas/`、`references/`）复制到宿主的技能目录：
+Claude Code 从 `~/.claude/skills/`（所有项目可用）或 `<项目>/.claude/skills/`（只在这个项目可用）里找 skill，**一个目录一个 `SKILL.md`**。三种装法任选其一：
 
-| 宿主 | 技能目录（用户级） |
+**① 直接克隆到用户级 skill 目录**（最简单）
+
+```bash
+git clone https://github.com/Owenwoow/Study-Mate-Skill.git ~/.claude/skills/study-mate-skill
+```
+
+**② 只给某个学习项目用**
+
+```bash
+git clone https://github.com/Owenwoow/Study-Mate-Skill.git <你的学习项目>/.claude/skills/study-mate-skill
+```
+
+**③ 仓库放在别处，用链接接进 skill 目录**（想单独维护、给多个项目共用时）
+
+```bash
+git clone https://github.com/Owenwoow/Study-Mate-Skill.git D:/Code/Study-Mate-Skill
+```
+
+```powershell
+# Windows：目录联接（不需要管理员权限）
+New-Item -ItemType Junction -Path "$HOME\.claude\skills\study-mate-skill" -Target "D:\Code\Study-Mate-Skill"
+```
+
+```bash
+# macOS / Linux：符号链接
+ln -s ~/Code/Study-Mate-Skill ~/.claude/skills/study-mate-skill
+```
+
+装好后**新开一个会话**（skill 列表在会话开始时加载），问一句「你有哪些可用的 skill」能看到 `study-mate-skill`，或直接说「我想学 X」，就说明识别到了。目录名不必和 skill 名完全一致（大小写、`_` 与 `-` 视为相同）。
+
+其他宿主（如 WorkBuddy AI 的 `~/.workbuddy-ai/skills/`）同理：把整个目录放进它的 skill 目录即可。
+
+## 配置学习工作区（可选）
+
+学习数据（科目、课件、进度、记忆）放在**学习工作区**里，按下面的顺序定位：
+
+1. 环境变量 `LEARN_WORKSPACE`
+2. 本机配置 `studymate.config.yaml` 的 `workspace:`（相对路径按本仓库目录解析，也可写绝对路径）
+3. 默认：本仓库下的 `workspace/`
+
+`studymate.config.yaml` 是**本机配置、不入库**。想把学习数据放到别处（比如放进你自己的笔记仓库、跟着它一起备份），从示例复制一份再改：
+
+```bash
+cp studymate.config.example.yaml studymate.config.yaml
+```
+
+```yaml
+workspace: D:/Learning/workspace
+```
+
+引擎与学习数据分开放，更新引擎（`git pull`）不会碰到你的学习记录。
+
+## 用法
+
+装好后在任意目录开会话，直接说：
+
+| 你说 | 会发生什么 |
 |---|---|
-| WorkBuddy AI | `~/.workbuddy-ai/skills/`（项目级：`<项目>/.workbuddy-ai/skills/`） |
-| Claude Code | `~/.claude/skills/`（项目级：`<项目>/.claude/skills/`） |
-| 其他宿主 | 按它自己的约定——只要是「一个目录一个 `SKILL.md`」的扫描方式即可 |
+| 「我想学 X」 | 总控亲自盘问（目的、程度、前置基础、配套项目、实操载体），然后建课：资料清单 → 图片库 → 知识点路线图 → 第一课 |
+| 「我不知道学什么，帮我选方向」 | 进入方向探索：一次问一个问题，通常 5 问、最多 8 问，给出候选方向，你确认后才建课 |
+| 「继续学 X」 | 恢复上次的进度，报告学到哪、建议这次学什么 |
+| 「这段没看懂」+ 贴原文 | 就地讲清那一段，必要时记一条误解，答完回到原处 |
+| 「考考我」 | 按当前节点出一份练习 |
+| 「学完了」 | 普通节点按页内自测与实操结果推进；实验课由出题角色按可运行证据验收 |
+
+**课件在哪**：学习工作区的 `index.html` 是课程总览，从那里点进科目主页和每一节课件（静态 HTML，用浏览器直接打开，离线可用）。
+
+**课件里有什么**：
+
+- 教科书式讲解与配图（图片库里的现成图、脚本出的图、内联 SVG）；数学式用离线 KaTeX 排版
+- 代码块语法高亮（PrismJS）+ 语言角标 + 一键复制；`::: code` 可以在代码框里加一句解释
+- 页内练习四种题型：**客观题**（即时判）、**开放题**（展开参考答案与判分要点自评）、**预测验证**（先写下预测才能看实际结果）、**交付物**（要做出什么 + 用来验收的测试命令）
+- 实操课附带 `lab/`：留白任务 + 断言 + 参考解，学生自己写、自己跑测试
+
+**进度**：每个节点三档（未开始 / 学习中 / 已学完）；实验课是里程碑验收，通过时连同它验收的前置节点一起置为已学完。
+
+想先看看页面长什么样（不用建真课程）：
 
 ```bash
-# 例：装到 WorkBuddy AI 的用户级技能目录
-cp -r Study-Mate-Skill ~/.workbuddy-ai/skills/
+python scripts/preview_templates.py --open   # 用假数据渲染到 .preview/
 ```
 
-装好后目录长这样（`name` 与目录名不一致时改一下 `SKILL.md` 的 frontmatter）：
+更完整的日常用法见 [`references/使用说明.md`](references/使用说明.md)，图解版见 [`docs/skill-tutorial.html`](docs/skill-tutorial.html)（下载后用浏览器打开）。
 
-```text
-~/.workbuddy-ai/skills/Study-Mate-Skill/
-├── SKILL.md               # 唯一入口（总控）
-├── studymate.config.yaml  # 工作区定位
-├── README.md
-├── references/            # 角色与协议规格 + 约束文档
-├── schemas/  templates/  scripts/
-└── workspace/             # 你的学习数据（默认位置）
-```
-
-细节与迁移见 [`references/安装与迁移.md`](references/安装与迁移.md)。
-
-## 快速开始
-
-装好后，在任意目录开会话：
-
-> 我想学「线性代数」，目标是能看懂机器学习论文里的矩阵推导。
-
-总控会先解析工作区、读共享记忆，然后盘问清楚再建课程。后续每次会话开场自动恢复进度。
-
-**第一次生成课程后**，课程总览页在工作区 `<LEARN_WORKSPACE>/index.html`——那是未来所有课件的入口。
-
-想先看看长什么样（不用建真课程）：
+## 更新
 
 ```bash
-python3 scripts/preview_templates.py --open   # 用假数据渲染到 .preview/，只看样式与交互
+git -C ~/.claude/skills/study-mate-skill pull   # 路径换成你的安装位置
 ```
 
-## 工作区在哪
-
-三级定位，前者优先：
-
-1. 环境变量 `LEARN_WORKSPACE`；
-2. `studymate.config.yaml` 里的 `workspace:`（可写相对本包的路径）；
-3. 默认 `<root>/workspace`。
-
-想换位置（比如放到 `D:\study`）：改 `studymate.config.yaml`，或每次开会话前 `export LEARN_WORKSPACE=/path/to/study`。学习数据全在工作区里，**换机器把整个包（含工作区）拷走即可**。
+更新后在学习项目里跑一次 `python <安装位置>/scripts/gen_home.py`，把新的共享前端资源铺进工作区。
 
 ## 包里有什么
 
@@ -86,69 +129,56 @@ python3 scripts/preview_templates.py --open   # 用假数据渲染到 .preview/�
 |---|---|
 | `SKILL.md` | **唯一入口**：学习系统总控——开场、盘问、学习循环、角色派发、脚本清单、边界 |
 | `references/roles/*.md` | 5 个角色规格：`resource-scout`（找资料）、`image-scout`（采图）、`curriculum-designer`（拟大纲）、`learning-coach`（写课件内容）、`practice-evaluator`（出题与实验课验收） |
-| `references/protocols/*.md` | 6 份协议：`learning-discovery`（可选方向探索）、`lesson-design`（课件内核）、`layered-practice`（题目规范）、`evidence-check`（实验课验收）、`local-qa`（局部答疑）、`record-keeping`（状态读写） |
-| `references/Agent交接协议.md` | 角色暂存交接（`handoff.json`）的唯一口径 |
-| `references/课件内容格式.md` | 内容文件与题目位置的语法——**渲染器的唯一输入规格** |
-| `references/工程约束.md` | 目录约定、占位符契约、前端技术选型 |
-| `references/使用说明.md` | 面向学生的日常用法 |
-| `references/设计方案.md` | 产品视角的设计意图 |
-| `scripts/` | 渲染器 + 4 道校验 + 主页生成 + 批处理（见下） |
-| `schemas/` | 5 份 JSON Schema：大纲 / 进度 / 评估 / 会话摘要 / 科目 |
-| `templates/` | 页面骨架（主页、科目页、课件壳）+ 工作区文件模板 + 前端资源源（Sayo UI + 主题层） |
+| `references/protocols/*.md` | 6 份协议：`learning-discovery`（方向探索）、`lesson-design`（课件内核）、`layered-practice`（题目规范）、`evidence-check`（实验课验收）、`local-qa`（局部答疑）、`record-keeping`（状态读写） |
+| `references/*.md` | 课件内容格式（渲染器的唯一输入规格）、工程约束、使用说明、设计方案、安装与迁移、Agent 交接协议 |
+| `scripts/` | 渲染器、主页生成、四道校验（大纲 / 课件 / 图片库 / skill 文档）、角色交接门禁、批处理，以及 `tests/` 回归测试 |
+| `schemas/` | 大纲、进度、误解记录、题目、科目、会话摘要、角色交接等 JSON Schema |
+| `templates/` | 页面骨架（主页、科目页、课件壳）、工作区文件模板、前端资源（Sayo UI、主题、PrismJS、KaTeX） |
+| `UPSTREAM.md` | 与原项目的同步状态：基线、本地定制清单、故意不跟的方向、同步记录 |
+| `.claude/skills/study-mate-sync/` | 维护者用：把上游新改动移植过来的流程与合并工具（在本仓库目录开 Claude Code 会话，说「同步上游」即可） |
 
-**规则归属**：一处定义、别处只给指针。课件内核看 `lesson-design`，题目看 `layered-practice`，配图规范在 `learning-coach` 的「配图」，状态读写看 `record-keeping`。
+**核心口径**：模型**一个字 HTML 都不写**。讲解角色写内容文件（`.md`），出题角色写题库（`.quiz.json`），HTML 由渲染器一次产出；所有校验都是确定性脚本，带行号报错。
 
 ## 脚本
 
-只依赖标准库 + `pyyaml`，全部是确定性的、带行号报错。用法 `python3 scripts/<名字> --help`。
+只依赖标准库 + `pyyaml`。用法 `python scripts/<名字> --help`。
 
 ```bash
-python3 scripts/gen_home.py [<workspace>]                # 生成根主页 + 全部科目主页（含链接自检）
-python3 scripts/render_lesson.py <科目目录> <节点id>      # 内容文件 + 题库 → 课件 HTML（--check 只校验）
-python3 scripts/check_lesson.py <页面> --subject <科目> --node <节点id>
-python3 scripts/check_curriculum.py <curriculum.yaml> ...
-python3 scripts/check_pool.py <科目目录>
-python3 scripts/check_skill.py                          # 校验本包文档的 frontmatter
-python3 scripts/preview_templates.py [--open]
-python3 scripts/apply_empty_reasons.py <科目目录> <节点id> <tsv>
-python3 scripts/renumber_lessons.py <科目目录> [--dry-run] [--render]
+python scripts/gen_home.py [<workspace>]                 # 生成根主页 + 全部科目主页（含链接自检）
+python scripts/render_lesson.py <科目目录> <节点id>       # 内容文件 + 题库 → 课件 HTML（--check 只校验）
+python scripts/check_lesson.py <页面> --subject <科目> --node <节点id>
+python scripts/check_curriculum.py <curriculum.yaml>     # 同目录有 RESOURCES.md 时顺带报资源覆盖率
+python scripts/check_pool.py <科目目录>                   # 图片库：命名、来源许可、体积、按文件头复算尺寸
+python scripts/check_handoff.py <stage_dir> --role <角色> [--node <节点id>]
+python scripts/check_skill.py                            # 校验本包文档的 frontmatter
+python scripts/renumber_lessons.py <科目目录> [--dry-run] [--render]
 ```
 
-**退出码**：`check_lesson.py` / `check_curriculum.py` / `check_pool.py` 有阻断项即 1；`gen_home.py` 占位符缺失或产物断链即 1；`render_lesson.py` 有问题即 1、用法错误即 2。
-
-**核心口径**：模型**一个字 HTML 都不写**。讲解角色写内容文件（`.md`），出题角色写题库（`.quiz.json`），HTML 由渲染器一次产出。内容文件里出现块级 HTML 标签会被渲染器拦下。
-
-## 验证
+## 测试
 
 ```bash
-# ① 文档 frontmatter
-python3 scripts/check_skill.py
-
-# ② 拿一份真实工作区跑一遍引擎（复制一份，别改原数据）
-cp -r <你的学习工作区> /tmp/sm-check && python3 scripts/gen_home.py /tmp/sm-check
-python3 scripts/check_curriculum.py /tmp/sm-check/.learning/subjects/*/curriculum.yaml
-python3 scripts/check_pool.py /tmp/sm-check/.learning/subjects/<slug>
-
-# ③ 回归测试（自己造临时科目，不碰工作区）
-bash scripts/tests/run_tests.sh
+python scripts/check_skill.py
+bash scripts/tests/run_tests.sh             # 19 套回归测试（自己造临时科目，不碰工作区）
+bash scripts/tests/run_tests.sh --browser   # 再加 3 套真实 Chrome 测试（需要 google-chrome）
 ```
 
-## 与 DSH 原版的差异
+Windows 上若没有 `python3` 命令，先让 `python3` 指向 `python`，并设 `PYTHONUTF8=1`（否则子进程按 GBK 解码输出）。
 
-整理成通用技能包时做了这些改动（引擎逻辑与约束文档的实质内容保持不变）：
+## 与原项目的差异
 
-| 方面 | DSH 原版 | 本通用版 |
+原项目后来演进成 DSH 插件：TypeScript 引擎注册为宿主原生工具、课件在 DSH 内嵌阅读端里看。本仓库保持宿主无关：
+
+| 方面 | 原项目（Study-Mate） | 本仓库 |
 |---|---|---|
-| 技能组织 | 11 个平级 `SKILL.md`（1 总控 + 5 角色 + 6 协议） | 1 个入口 `SKILL.md` + `references/` 下 11 份参考规格（不会被注册成独立技能） |
-| 安装 | `install.sh` / `install.ps1` 装预设到 `~/.dsh/` + npm 包 `@yunmiao/studymate` | 把目录复制到宿主的技能目录；无安装脚本、无 npm 依赖 |
-| 工作区定位 | 读 `~/.dsh/studymate-config.yaml` | 三级定位：`LEARN_WORKSPACE` 环境变量 → `studymate.config.yaml` → `<root>/workspace` |
-| 角色派发 | 只用 DSH 的 `subagent` | **两条路**：宿主有子代理能力就派出去；没有就由总控按角色规格自己串行做（角色边界仍然有效） |
-| 用户交互 / 呈现 | `ask_user_question` / `present` / `xdg-open` | 用宿主自带的提问与呈现能力；**至少必须在回复里给出绝对路径** |
-| 文档位置 | `docs/` | `references/`（保留 `课件内容格式.md` 等文件名，测试与脚本的引用同步更新） |
-| 已剔除 | 预设、npm 打包、发布流水线、DSH 专有的安装器测试 | — |
+| 形态 | npm 插件包 `@yunmiao/studymate`，12 个子 skill + 学习模式预设 | 1 个 `SKILL.md` 入口 + `references/` 下 11 份参考规格 |
+| 引擎 | TypeScript，注册为宿主原生工具（v1.1 起） | Python 脚本，Agent 用命令行调用 |
+| 看课件 | DSH 内嵌阅读端；静态页只作导出 | 静态 HTML 课件就是主体验，浏览器直接打开 |
+| 工作区 | 读 `~/.dsh/studymate-config.yaml` | `LEARN_WORKSPACE` → `studymate.config.yaml` → `<root>/workspace` |
+| 角色派发 | DSH 的 `subagent` | 宿主有子代理就派出去；没有就由总控按角色规格自己串行做 |
+| 本地增补 | — | PrismJS 代码高亮；在 Python 渲染器与 `quiz.js` 里实现了原项目只在 TS 阅读端做的部分（四种题型、`::: code`、三档进度映射、资源覆盖率、图片文件头复算） |
 
-`scripts/check_skill.py` 重写为校验本包的文档 frontmatter（`name` + `description`）；`gen_home.py` 的工作区定位改为三级；其余脚本只做了路径引用同步。
+学习方法本身（盘问 → 路线图 → 课件 + 练习 → 实验课验收 → 状态落盘）与原项目一致；哪些改动跟了、哪些故意没跟、为什么，逐条记在 [`UPSTREAM.md`](UPSTREAM.md)。
 
 ## License
 
-MIT（见 [LICENSE](LICENSE)，版权 Cattofu）。上游项目：[Miaotofu01/Study-Mate](https://github.com/Miaotofu01/Study-Mate)。
+MIT，见 [LICENSE](LICENSE)（版权 Cattofu）。原项目：[Miaotofu01/Study-Mate](https://github.com/Miaotofu01/Study-Mate)。
